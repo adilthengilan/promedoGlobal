@@ -43,12 +43,81 @@ export interface UserCustomModule {
 // ============================================================================
 // BOOKMARKS (users/{userId}/bookmarks/{questionId})
 // ============================================================================
+// LOCAL STORAGE PERSISTENCE & CACHING HELPERS
+// ============================================================================
+
+const BOOKMARKS_STORAGE_PREFIX = 'promedo_user_bookmarks_';
+const SUBJECT_BOOKMARKS_STORAGE_PREFIX = 'promedo_user_subject_bookmarks_';
+const CUSTOM_MODULES_STORAGE_PREFIX = 'promedo_user_custom_modules_';
+
+function getLocalBookmarks(userId: string): QuestionReference[] {
+  if (!userId) return [];
+  try {
+    const raw = localStorage.getItem(`${BOOKMARKS_STORAGE_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalBookmarks(userId: string, bookmarks: QuestionReference[]): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(`${BOOKMARKS_STORAGE_PREFIX}${userId}`, JSON.stringify(bookmarks));
+  } catch {}
+}
+
+function getLocalSubjectBookmarks(userId: string): string[] {
+  if (!userId) return [];
+  try {
+    const raw = localStorage.getItem(`${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalSubjectBookmarks(userId: string, ids: string[]): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(`${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId}`, JSON.stringify(ids));
+  } catch {}
+}
+
+function getLocalCustomModules(userId: string): UserCustomModule[] {
+  if (!userId) return [];
+  try {
+    const raw = localStorage.getItem(`${CUSTOM_MODULES_STORAGE_PREFIX}${userId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalCustomModules(userId: string, modules: UserCustomModule[]): void {
+  if (!userId) return;
+  try {
+    localStorage.setItem(`${CUSTOM_MODULES_STORAGE_PREFIX}${userId}`, JSON.stringify(modules));
+  } catch {}
+}
+
+// ============================================================================
+// BOOKMARKS (users/{userId}/bookmarks/{questionId})
+// ============================================================================
 
 export function subscribeToUserBookmarks(
   userId: string,
   onUpdate: (bookmarks: QuestionReference[]) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  // Supply cached local bookmarks immediately for instant responsiveness
+  onUpdate(getLocalBookmarks(userId));
+
   const colRef = collection(db, 'users', userId, 'bookmarks');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(
@@ -63,10 +132,12 @@ export function subscribeToUserBookmarks(
           createdAt: data.createdAt as string | undefined
         };
       });
+      saveLocalBookmarks(userId, list);
       onUpdate(list);
     },
     (error) => {
-      console.error('Error subscribing to user bookmarks:', error);
+      console.warn('Notice: Using local user bookmarks fallback (Firestore sync notice):', error?.message || error);
+      onUpdate(getLocalBookmarks(userId));
       if (onError) onError(error);
     }
   );
@@ -76,22 +147,46 @@ export async function addUserBookmark(
   userId: string,
   ref: Omit<QuestionReference, 'createdAt'>
 ): Promise<void> {
-  // Using questionId as document ID prevents duplicate bookmarks
-  const docRef = doc(db, 'users', userId, 'bookmarks', ref.questionId);
-  await setDoc(docRef, {
-    questionId: ref.questionId,
-    subjectId: ref.subjectId,
-    subjectName: ref.subjectName,
-    createdAt: new Date().toISOString()
-  });
+  if (!userId) return;
+
+  // Optimistic local update
+  const current = getLocalBookmarks(userId);
+  const updated = [
+    { ...ref, createdAt: new Date().toISOString() },
+    ...current.filter((b) => b.questionId !== ref.questionId)
+  ];
+  saveLocalBookmarks(userId, updated);
+
+  try {
+    const docRef = doc(db, 'users', userId, 'bookmarks', ref.questionId);
+    await setDoc(docRef, {
+      questionId: ref.questionId,
+      subjectId: ref.subjectId,
+      subjectName: ref.subjectName,
+      createdAt: new Date().toISOString()
+    });
+  } catch (err: any) {
+    console.warn('Notice: Bookmark saved locally, Firestore sync deferred:', err?.message || err);
+  }
 }
 
 export async function removeUserBookmark(
   userId: string,
   questionId: string
 ): Promise<void> {
-  const docRef = doc(db, 'users', userId, 'bookmarks', questionId);
-  await deleteDoc(docRef);
+  if (!userId) return;
+
+  // Optimistic local update
+  const current = getLocalBookmarks(userId);
+  const updated = current.filter((b) => b.questionId !== questionId);
+  saveLocalBookmarks(userId, updated);
+
+  try {
+    const docRef = doc(db, 'users', userId, 'bookmarks', questionId);
+    await deleteDoc(docRef);
+  } catch (err: any) {
+    console.warn('Notice: Bookmark removed locally, Firestore sync deferred:', err?.message || err);
+  }
 }
 
 export async function toggleUserBookmark(
@@ -117,14 +212,25 @@ export function subscribeToUserSubjectBookmarks(
   onData: (subjectIds: string[]) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
+  if (!userId) {
+    onData([]);
+    return () => {};
+  }
+
+  // Supply cached local subject bookmarks immediately
+  onData(getLocalSubjectBookmarks(userId));
+
   const colRef = collection(db, 'users', userId, 'subjectBookmarks');
   return onSnapshot(
     colRef,
     (snapshot) => {
-      onData(snapshot.docs.map((d) => d.id));
+      const ids = snapshot.docs.map((d) => d.id);
+      saveLocalSubjectBookmarks(userId, ids);
+      onData(ids);
     },
     (err) => {
-      console.error('Error subscribing to subject bookmarks:', err);
+      console.warn('Notice: Using local subject bookmarks (Firestore sync notice):', err?.message || err);
+      onData(getLocalSubjectBookmarks(userId));
       if (onError) onError(err);
     }
   );
@@ -135,17 +241,32 @@ export async function toggleUserSubjectBookmark(
   subjectId: string,
   isCurrentlyBookmarked: boolean
 ): Promise<boolean> {
-  const docRef = doc(db, 'users', userId, 'subjectBookmarks', subjectId);
+  if (!userId) return !isCurrentlyBookmarked;
+
+  // Optimistic local update
+  const current = getLocalSubjectBookmarks(userId);
+  let updated: string[];
   if (isCurrentlyBookmarked) {
-    await deleteDoc(docRef);
-    return false;
+    updated = current.filter((id) => id !== subjectId);
   } else {
-    await setDoc(docRef, {
-      subjectId,
-      createdAt: new Date().toISOString(),
-    });
-    return true;
+    updated = Array.from(new Set([...current, subjectId]));
   }
+  saveLocalSubjectBookmarks(userId, updated);
+
+  try {
+    const docRef = doc(db, 'users', userId, 'subjectBookmarks', subjectId);
+    if (isCurrentlyBookmarked) {
+      await deleteDoc(docRef);
+    } else {
+      await setDoc(docRef, {
+        subjectId,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  } catch (err: any) {
+    console.warn('Notice: Subject bookmark saved locally, Firestore sync deferred:', err?.message || err);
+  }
+  return !isCurrentlyBookmarked;
 }
 
 // ============================================================================
@@ -157,6 +278,14 @@ export function subscribeToUserCustomModules(
   onUpdate: (modules: UserCustomModule[]) => void,
   onError?: (err: Error) => void
 ): Unsubscribe {
+  if (!userId) {
+    onUpdate([]);
+    return () => {};
+  }
+
+  // Supply cached local modules immediately
+  onUpdate(getLocalCustomModules(userId));
+
   const colRef = collection(db, 'users', userId, 'customModules');
   const q = query(colRef, orderBy('createdAt', 'desc'));
   return onSnapshot(
@@ -172,10 +301,12 @@ export function subscribeToUserCustomModules(
           updatedAt: (data.updatedAt as string) || new Date().toISOString()
         };
       });
+      saveLocalCustomModules(userId, list);
       onUpdate(list);
     },
     (error) => {
-      console.error('Error subscribing to user custom modules:', error);
+      console.warn('Notice: Using local custom modules (Firestore sync notice):', error?.message || error);
+      onUpdate(getLocalCustomModules(userId));
       if (onError) onError(error);
     }
   );
@@ -187,8 +318,9 @@ export async function createUserCustomModule(
   questionRefs: QuestionReference[]
 ): Promise<string> {
   const now = new Date().toISOString();
-  const colRef = collection(db, 'users', userId, 'customModules');
-  const docRef = await addDoc(colRef, {
+  const localId = `mod_${Date.now()}`;
+  const newModule: UserCustomModule = {
+    id: localId,
     name: name.trim(),
     questionRefs: questionRefs.map((r) => ({
       questionId: r.questionId,
@@ -197,8 +329,32 @@ export async function createUserCustomModule(
     })),
     createdAt: now,
     updatedAt: now
-  });
-  return docRef.id;
+  };
+
+  // Optimistic local update
+  const current = getLocalCustomModules(userId);
+  saveLocalCustomModules(userId, [newModule, ...current]);
+
+  try {
+    const colRef = collection(db, 'users', userId, 'customModules');
+    const docRef = await addDoc(colRef, {
+      name: name.trim(),
+      questionRefs: questionRefs.map((r) => ({
+        questionId: r.questionId,
+        subjectId: r.subjectId,
+        subjectName: r.subjectName
+      })),
+      createdAt: now,
+      updatedAt: now
+    });
+    // Update local ID to Firestore ID
+    const updated = getLocalCustomModules(userId).map(m => m.id === localId ? { ...m, id: docRef.id } : m);
+    saveLocalCustomModules(userId, updated);
+    return docRef.id;
+  } catch (err: any) {
+    console.warn('Notice: Custom module saved locally, Firestore sync deferred:', err?.message || err);
+    return localId;
+  }
 }
 
 export async function updateUserCustomModule(
@@ -207,24 +363,57 @@ export async function updateUserCustomModule(
   name: string,
   questionRefs: QuestionReference[]
 ): Promise<void> {
-  const docRef = doc(db, 'users', userId, 'customModules', moduleId);
-  await updateDoc(docRef, {
-    name: name.trim(),
-    questionRefs: questionRefs.map((r) => ({
-      questionId: r.questionId,
-      subjectId: r.subjectId,
-      subjectName: r.subjectName
-    })),
-    updatedAt: new Date().toISOString()
+  const now = new Date().toISOString();
+  // Optimistic local update
+  const current = getLocalCustomModules(userId);
+  const updated = current.map((m) => {
+    if (m.id === moduleId) {
+      return {
+        ...m,
+        name: name.trim(),
+        questionRefs: questionRefs.map((r) => ({
+          questionId: r.questionId,
+          subjectId: r.subjectId,
+          subjectName: r.subjectName
+        })),
+        updatedAt: now
+      };
+    }
+    return m;
   });
+  saveLocalCustomModules(userId, updated);
+
+  try {
+    const docRef = doc(db, 'users', userId, 'customModules', moduleId);
+    await updateDoc(docRef, {
+      name: name.trim(),
+      questionRefs: questionRefs.map((r) => ({
+        questionId: r.questionId,
+        subjectId: r.subjectId,
+        subjectName: r.subjectName
+      })),
+      updatedAt: now
+    });
+  } catch (err: any) {
+    console.warn('Notice: Custom module updated locally, Firestore sync deferred:', err?.message || err);
+  }
 }
 
 export async function deleteUserCustomModule(
   userId: string,
   moduleId: string
 ): Promise<void> {
-  const docRef = doc(db, 'users', userId, 'customModules', moduleId);
-  await deleteDoc(docRef);
+  // Optimistic local update
+  const current = getLocalCustomModules(userId);
+  const updated = current.filter((m) => m.id !== moduleId);
+  saveLocalCustomModules(userId, updated);
+
+  try {
+    const docRef = doc(db, 'users', userId, 'customModules', moduleId);
+    await deleteDoc(docRef);
+  } catch (err: any) {
+    console.warn('Notice: Custom module deleted locally, Firestore sync deferred:', err?.message || err);
+  }
 }
 
 // ============================================================================
@@ -306,4 +495,26 @@ export async function resolveQuestionReferences(
   return refs
     .map((r) => resolvedMap.get(r.questionId))
     .filter((q): q is ResolvedQuestion => Boolean(q));
+}
+export async function fetchQuestionsBySubject(subjectId: string): Promise<ResolvedQuestion[]> {
+  try {
+    const snap = await getDocs(collection(db, `questionBank/${subjectId}/questions`));
+    return snap.docs.map(d => {
+      const data = d.data();
+      return {
+        id: d.id,
+        subjectId,
+        subjectName: '', // Could be fetched separately if needed, but not critical
+        text: (data.text as string) || '',
+        options: Array.isArray(data.options) ? data.options : [],
+        correctAnswer: typeof data.correctAnswer === 'number' ? data.correctAnswer : 0,
+        explanation: (data.explanation as string) || '',
+        imageUrl: data.imageUrl as string | undefined,
+        createdAt: data.createdAt as string | undefined
+      };
+    });
+  } catch (err) {
+    console.warn(`Error fetching questions for subject ${subjectId}:`, err);
+    return [];
+  }
 }

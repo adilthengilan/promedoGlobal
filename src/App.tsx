@@ -27,6 +27,7 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import CoursePlayer from './pages/CoursePlayer';
 import Checkout from './pages/Checkout';
+import Bookmarks from './pages/Bookmarks';
 
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 
@@ -35,11 +36,12 @@ function AppContent() {
   const isHome = location.pathname === '/';
   const isMockTestActive = location.pathname.startsWith('/mock-test');
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
+  const isAdminPage = location.pathname.startsWith('/adminlandingpage') || location.pathname.startsWith('/admin');
 
   return (
     <div className="flex flex-col min-h-screen">
-      {!isMockTestActive && !isAuthPage && <Navbar />}
-      <main className={`flex-grow ${!isMockTestActive && !isAuthPage && !isHome ? 'pt-20' : ''}`}>
+      {!isMockTestActive && !isAuthPage && !isAdminPage && <Navbar />}
+      <main className={`flex-grow ${!isMockTestActive && !isAuthPage && !isHome && !isAdminPage ? 'pt-20' : ''}`}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
@@ -59,7 +61,9 @@ function AppContent() {
           <Route path="/success" element={<Success />} />
           <Route path="/player/:id" element={<CoursePlayer />} />
           <Route path="/mock-test/:id?" element={<MockTest />} />
+          <Route path="/student/subject/:subjectId" element={<SubjectPractice />} />
           <Route path="/subject-practice" element={<SubjectPractice />} />
+          <Route path="/student/bookmarks" element={<Bookmarks />} />
           <Route path="/updates" element={<Updates />} />
           <Route path="/exam-demo" element={<ExamDemo />} />
           <Route path="/mock-test-intro" element={<MockTestIntro />} />
@@ -75,8 +79,8 @@ function AppContent() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         </Routes>
       </main>
-      {!isMockTestActive && !isAuthPage && <Footer />}
-      {!isMockTestActive && <WhatsAppFloatingButton />}
+      {!isMockTestActive && !isAuthPage && !isAdminPage && <Footer />}
+      {!isMockTestActive && !isAdminPage && <WhatsAppFloatingButton />}
     </div>
   );
 }

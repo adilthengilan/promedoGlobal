@@ -139,7 +139,7 @@ export function subscribeToSubjects(
       onData(list);
     },
     (error) => {
-      console.error('subscribeToSubjects error:', error);
+      console.warn('subscribeToSubjects notice:', error);
       if (onError) onError(error);
     }
   );
@@ -167,7 +167,7 @@ export function subscribeToSubjectQuestions(
       onData(list);
     },
     (error) => {
-      console.error(`subscribeToSubjectQuestions(${subjectId}) error:`, error);
+      console.warn(`subscribeToSubjectQuestions(${subjectId}) notice:`, error);
       if (onError) onError(error);
     }
   );
@@ -272,7 +272,7 @@ export function subscribeToMockTests(
       onData(list);
     },
     (error) => {
-      console.error('subscribeToMockTests error:', error);
+      console.warn('subscribeToMockTests notice:', error);
       if (onError) onError(error);
     }
   );
@@ -295,7 +295,7 @@ export function subscribeToCourses(
       onData(list);
     },
     (error) => {
-      console.error('subscribeToCourses error:', error);
+      console.warn('subscribeToCourses notice:', error);
       if (onError) onError(error);
     }
   );
@@ -324,7 +324,7 @@ export function subscribeToUserEnrollments(
       onData(list);
     },
     (error) => {
-      console.error('subscribeToUserEnrollments error:', error);
+      console.warn('subscribeToUserEnrollments notice:', error);
       if (onError) onError(error);
     }
   );

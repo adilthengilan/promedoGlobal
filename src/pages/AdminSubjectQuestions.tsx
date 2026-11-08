@@ -589,71 +589,110 @@ export default function AdminSubjectQuestions() {
   );
 
   return (
-    <div className="min-h-screen pt-32 pb-24 bg-brand-gray/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Navigation & Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
-          <div className="flex items-center gap-4">
-            <button 
-              onClick={() => {
-                if (viewMode === 'add-questions') {
-                  setViewMode('list');
-                } else {
-                  navigate('/adminlandingpage');
-                }
-              }}
-              className="w-12 h-12 bg-white rounded-2xl border border-gray-100 flex items-center justify-center text-gray-500 hover:text-brand-blue hover:shadow-md transition-all shadow-sm cursor-pointer"
-              title={viewMode === 'add-questions' ? 'Back to Subjects List' : 'Return to main admin dashboard'}
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 bg-brand-blue/10 text-brand-blue rounded-full text-[10px] font-bold uppercase tracking-widest">
-                  Content Management
-                </span>
-              </div>
-              <h1 className="text-4xl font-bold text-gray-900 mt-1">
-                {viewMode === 'add-questions' ? `Add Questions: ${subjects.find(s => s.id === selectedSubjectId)?.name || 'Editor'}` : 'Subject Practice Builder'}
-              </h1>
-              <p className="text-gray-500 font-medium">
-                {viewMode === 'add-questions' ? 'Configure clinical scenarios and multiple-choice options securely' : 'Build high-yield subject-wise preparation portals for medical students.'}
-              </p>
+    <div className="min-h-screen bg-[#F4F6F9] text-gray-800 antialiased flex flex-col">
+      {/* Top Navigation Bar matching Gentelella v4 Header */}
+      <header className="h-16 bg-white border-b border-gray-200/80 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <button 
+            onClick={() => {
+              if (viewMode === 'add-questions') {
+                setViewMode('list');
+              } else {
+                navigate('/adminlandingpage');
+              }
+            }}
+            className="flex items-center gap-2 text-xs font-bold text-gray-600 hover:text-brand-blue hover:bg-gray-100 transition-colors px-3 py-2 rounded-xl shrink-0 cursor-pointer"
+            title={viewMode === 'add-questions' ? 'Back to Subjects List' : 'Return to main dashboard'}
+          >
+            <ArrowLeft size={16} />
+            <span className="hidden sm:inline">{viewMode === 'add-questions' ? 'Subjects List' : 'Dashboard'}</span>
+          </button>
+          
+          <div className="h-4 w-px bg-gray-200 hidden sm:block shrink-0" />
+          
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-teal-500 text-white font-black flex items-center justify-center text-sm shadow-2xs shrink-0">
+              G
+            </div>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 truncate">
+              <span className="text-gray-900 font-extrabold hidden md:inline">Gentelella v4</span>
+              <span className="text-gray-300 hidden md:inline">/</span>
+              <span className="text-gray-600 hidden sm:inline">Question Bank</span>
+              <span className="text-gray-300">/</span>
+              <span className="text-brand-blue font-black truncate">
+                {viewMode === 'add-questions' 
+                  ? `Question Editor: ${subjects.find(s => s.id === selectedSubjectId)?.name || 'Editor'}` 
+                  : 'Subject Practice Builder'}
+              </span>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap gap-3">
-            {viewMode === 'list' && (
-              <>
-                <button 
-                  onClick={() => setShowAddSubject(true)}
-                  className="flex items-center gap-2 px-6 py-3.5 bg-brand-blue text-white rounded-2xl font-bold hover:bg-opacity-95 hover:shadow-lg transition-all shadow-md text-sm shrink-0 cursor-pointer"
-                >
-                  <Plus size={18} />
-                  Create Subject
-                </button>
-
-                <button 
-                  onClick={() => selectedSubjectId && confirmDeleteSubject(selectedSubjectId)}
-                  disabled={!selectedSubjectId || subjects.length === 0}
-                  className="flex items-center gap-2 px-6 py-3.5 bg-rose-600 text-white rounded-2xl font-bold hover:bg-rose-700 transition-all shadow-md text-sm shrink-0 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer animate-fade-in"
-                  title="Delete the currently active selected subject"
-                >
-                  <Trash2 size={18} />
-                  Delete Subject
-                </button>
-              </>
-            )}
-
-            {viewMode === 'add-questions' && (
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {viewMode === 'list' ? (
+            <>
               <button 
-                onClick={() => setViewMode('list')}
-                className="flex items-center gap-2 px-6 py-3.5 bg-white text-gray-700 rounded-2xl font-bold hover:bg-gray-50 border border-gray-200 transition-all shadow-sm text-sm shrink-0 cursor-pointer"
+                onClick={() => setShowAddSubject(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold transition-all shadow-xs text-xs cursor-pointer"
               >
-                <ArrowLeft size={18} />
-                Back to Subjects List
+                <Plus size={15} />
+                <span>Create Subject</span>
               </button>
-            )}
+
+              <button 
+                onClick={() => selectedSubjectId && confirmDeleteSubject(selectedSubjectId)}
+                disabled={!selectedSubjectId || subjects.length === 0}
+                className="flex items-center gap-2 px-3.5 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white border border-rose-200 rounded-xl font-bold transition-all text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                title="Delete selected subject"
+              >
+                <Trash2 size={15} />
+                <span className="hidden sm:inline">Delete Subject</span>
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => setViewMode('list')}
+              className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-xl font-bold hover:bg-gray-100 border border-gray-200 transition-all shadow-2xs text-xs cursor-pointer"
+            >
+              <ArrowLeft size={15} />
+              <span>Back to Subjects</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      {/* Main Content Workspace */}
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Breadcrumb & Section Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-md text-[10px] font-black uppercase tracking-wider">
+                CONTENT MANAGEMENT
+              </span>
+              <span className="text-xs text-gray-400 font-semibold">
+                {subjects.length} Subjects Active
+              </span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1C30] tracking-tight">
+              {viewMode === 'add-questions' 
+                ? `Questions: ${subjects.find(s => s.id === selectedSubjectId)?.name || 'Subject'}` 
+                : 'Subject Questions Builder'}
+            </h1>
+            <p className="text-xs text-gray-500 font-medium mt-0.5">
+              {viewMode === 'add-questions' 
+                ? 'Configure clinical vignettes, 4 multiple choice options, correct answers and rationale.' 
+                : 'Build high-yield subject-wise preparation portals for medical and GCC licensing candidates.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-2 bg-white rounded-xl border border-gray-200/80 shadow-2xs text-right">
+              <p className="text-[10px] font-bold text-gray-400 uppercase">Total Questions</p>
+              <p className="text-lg font-black text-brand-blue leading-none mt-0.5">
+                {(Object.values(subjectCounts) as number[]).reduce((a, b) => a + b, 0)}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -710,21 +749,22 @@ export default function AdminSubjectQuestions() {
                 </div>
               </div>
             ) : (
-              <div className="bg-white rounded-[32px] border border-gray-100 p-6 sm:p-8 shadow-sm">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-6 border-b border-gray-100/50">
+              <div className="bg-white rounded-2xl border border-gray-200/80 p-6 sm:p-7 shadow-2xs">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-5 border-b border-gray-100">
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                      <Target size={20} className="text-brand-blue" />
-                      Active Subjects Catalog
+                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                      <Target size={18} className="text-teal-600" />
+                      <span>Active Subjects Catalog</span>
                     </h2>
-                    <p className="text-xs text-gray-400 font-medium">Configure clinical question blocks for added study subjects below.</p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">Configure clinical question blocks for added study subjects below.</p>
                   </div>
-                  <div className="px-3 py-1 rounded-xl bg-blue-50 text-xs font-bold text-brand-blue border border-blue-100">
-                    Total Database Size: {(Object.values(subjectCounts) as number[]).reduce((a, b) => a + b, 0)} Questions
+                  <div className="px-3 py-1.5 rounded-xl bg-teal-50 text-xs font-bold text-teal-700 border border-teal-200 flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                    <span>Database: {(Object.values(subjectCounts) as number[]).reduce((a, b) => a + b, 0)} Total Questions</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {subjects.map(s => {
                     const count = subjectCounts[s.id] || 0;
                     const isSelected = selectedSubjectId === s.id;
@@ -735,46 +775,46 @@ export default function AdminSubjectQuestions() {
                       <div 
                         key={s.id}
                         onClick={() => setSelectedSubjectId(s.id)}
-                        className={`p-6 rounded-[24px] border-2 transition-all cursor-pointer select-none relative group flex flex-col justify-between ${
+                        className={`p-5 rounded-2xl border transition-all cursor-pointer select-none relative group flex flex-col justify-between ${
                           isSelected 
-                          ? 'bg-blue-50/20 border-brand-blue shadow-md' 
-                          : 'bg-white border-gray-100 hover:border-gray-200 hover:shadow-lg'
+                          ? 'bg-teal-50/20 border-teal-500 shadow-sm ring-1 ring-teal-500/20' 
+                          : 'bg-white border-gray-200/90 hover:border-gray-300 hover:shadow-xs'
                         }`}
                       >
                         <div>
-                          <div className="flex justify-between items-baseline gap-2 mb-2">
-                            <span className="text-base font-extrabold text-gray-900 group-hover:text-brand-blue transition-colors truncate block max-w-[150px]" title={s.name}>
+                          <div className="flex justify-between items-start gap-2 mb-2">
+                            <span className="text-base font-extrabold text-gray-900 group-hover:text-teal-600 transition-colors truncate block max-w-[180px]" title={s.name}>
                               {s.name}
                             </span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <span className="text-lg font-black text-gray-900">{count}</span>
-                              <span className="text-[10px] font-bold text-gray-400">/ 120 Qs</span>
+                            <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-gray-100 text-xs font-bold text-gray-700">
+                              <span className="font-black text-gray-900">{count}</span>
+                              <span className="text-[10px] text-gray-400">/ 120</span>
                             </div>
                           </div>
 
-                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-4 overflow-hidden">
+                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3.5 overflow-hidden">
                             <div 
-                              className={`h-full rounded-full transition-all duration-500 ${isDone ? 'bg-green-500' : 'bg-brand-blue'}`}
+                              className={`h-full rounded-full transition-all duration-500 ${isDone ? 'bg-emerald-500' : 'bg-teal-500'}`}
                               style={{ width: `${percent}%` }}
                             />
                           </div>
 
-                          <p className="text-xs text-gray-500 line-clamp-3 mb-6 min-h-[48px]">
+                          <p className="text-xs text-gray-500 line-clamp-3 mb-5 min-h-[44px] leading-relaxed">
                             {s.details || 'No additional description provided.'}
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between gap-3 pt-4 border-t border-gray-100">
+                        <div className="flex items-center justify-between gap-2.5 pt-3.5 border-t border-gray-100">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               setSelectedSubjectId(s.id);
                               setViewMode('add-questions');
                             }}
-                            className="flex-grow flex items-center justify-center gap-1.5 px-4 py-2.5 bg-brand-blue text-white rounded-xl text-xs font-bold hover:bg-opacity-95 hover:shadow-lg transition-all shadow-sm cursor-pointer"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-[#151B26] hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer"
                           >
-                            <Plus size={14} />
-                            Add Questions
+                            <Plus size={13} />
+                            <span>Add Questions</span>
                           </button>
 
                           <div className="flex gap-1.5 shrink-0">
@@ -784,10 +824,10 @@ export default function AdminSubjectQuestions() {
                                 setSelectedSubjectId(s.id);
                                 handleStartEditSubject(s.id);
                               }}
-                              className="p-2.5 bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white rounded-xl transition-all cursor-pointer"
+                              className="p-2 bg-gray-100 text-gray-600 hover:bg-teal-600 hover:text-white rounded-xl transition-all cursor-pointer"
                               title="Edit Subject Info"
                             >
-                              <Edit2 size={14} />
+                              <Edit2 size={13} />
                             </button>
                             <button
                               onClick={(e) => {
@@ -795,10 +835,10 @@ export default function AdminSubjectQuestions() {
                                 setSelectedSubjectId(s.id);
                                 confirmDeleteSubject(s.id);
                               }}
-                              className="p-2.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all cursor-pointer"
+                              className="p-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-xl transition-all cursor-pointer"
                               title="Delete Subject"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </div>
@@ -813,20 +853,20 @@ export default function AdminSubjectQuestions() {
 
         {/* VIEW MODE: ADD QUESTIONS */}
         {viewMode === 'add-questions' && (
-          <div className="grid lg:grid-cols-12 gap-8">
+          <div className="grid lg:grid-cols-12 gap-6">
             
             {/* LEFT SIDE: Subject Info & Question Form */}
-            <div className="lg:col-span-7 space-y-8">
-              <div className="bg-white rounded-[40px] border border-gray-100 p-8 sm:p-10 shadow-sm">
+            <div className="lg:col-span-7 space-y-6">
+              <div className="bg-white rounded-2xl border border-gray-200/80 p-6 sm:p-7 shadow-2xs">
                 
                 {/* Header info of active subject */}
-                <div className="mb-8 p-6 bg-brand-gray/40 rounded-3xl border border-gray-100">
+                <div className="mb-6 p-4 sm:p-5 bg-slate-50 rounded-xl border border-gray-200/70">
                   <div className="flex justify-between items-start gap-4">
                     <div>
-                      <span className="text-[10px] bg-brand-blue/10 text-brand-blue font-bold px-2.5 py-1 rounded-full uppercase">
-                        Active Subject
+                      <span className="text-[10px] bg-teal-50 text-teal-700 font-extrabold px-2.5 py-1 rounded-md uppercase tracking-wider border border-teal-200/60">
+                        ACTIVE SUBJECT
                       </span>
-                      <h2 className="text-2xl font-black text-gray-900 mt-2">
+                      <h2 className="text-xl font-black text-gray-900 mt-2">
                         {subjects.find(s => s.id === selectedSubjectId)?.name}
                       </h2>
                       <p className="text-xs text-gray-500 mt-1 italic leading-relaxed">
@@ -835,7 +875,7 @@ export default function AdminSubjectQuestions() {
                     </div>
 
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="text-xs text-gray-400 font-extrabold">PROGRESSION</span>
+                      <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider">PROGRESSION</span>
                       <div className="flex items-baseline gap-1 mt-1">
                         <span className="text-xl font-black text-brand-blue">{questions.length}</span>
                         <span className="text-xs text-gray-400 font-bold">/ 120 Qs</span>
@@ -843,29 +883,29 @@ export default function AdminSubjectQuestions() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex gap-2 mt-4 pt-3.5 border-t border-gray-200/60">
                     <button
                       onClick={handleStartEditSubject}
-                      className="text-xs font-bold text-brand-blue hover:bg-brand-blue hover:text-white bg-blue-50/50 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="text-xs font-bold text-gray-700 hover:text-teal-700 bg-white hover:bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <Edit2 size={12} />
-                      Edit Subject Config
+                      <span>Edit Subject Config</span>
                     </button>
                     <button
                       onClick={() => setViewMode('list')}
-                      className="text-xs font-bold text-gray-500 hover:bg-gray-100 bg-gray-50 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="text-xs font-bold text-gray-600 hover:bg-gray-100 bg-white px-3 py-1.5 rounded-lg border border-gray-200 transition-all flex items-center gap-1.5 cursor-pointer"
                     >
                       <ArrowLeft size={12} />
-                      Change Subject
+                      <span>Change Subject</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Create/Edit Question Fields */}
-                <div className="space-y-6">
-                  <div className="space-y-2">
+                <div className="space-y-5">
+                  <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
-                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Question Text</label>
+                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Question Vignette / Text</label>
                       <span className="text-[10px] text-gray-400 font-medium">supports clinical scenario formulations</span>
                     </div>
                     <textarea 
@@ -874,20 +914,20 @@ export default function AdminSubjectQuestions() {
                       rows={4}
                       value={questionForm.text}
                       onChange={e => setQuestionForm({ ...questionForm, text: e.target.value })}
-                      className="w-full px-5 py-4 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all resize-none"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none font-normal"
                       placeholder="Enter the medical/prometric clinical trial question context here..."
                     />
                   </div>
 
                   {/* Question Image (Optional) */}
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
                       <label className="text-xs font-bold text-gray-700 uppercase tracking-wider block flex items-center gap-1.5">
-                        <ImageIcon size={14} className="text-brand-blue" />
+                        <ImageIcon size={14} className="text-teal-600" />
                         <span>Question Image</span>
                         <span className="text-gray-400 font-normal lowercase">(optional)</span>
                       </label>
-                      <span className="text-[10px] text-gray-400 font-medium">Radiographs, ECG strips, CT scans, derm lesions</span>
+                      <span className="text-[10px] text-gray-400 font-medium">Radiographs, ECG strips, CT scans, pathology</span>
                     </div>
 
                     <input 
@@ -901,25 +941,25 @@ export default function AdminSubjectQuestions() {
                     {!questionForm.imageUrl ? (
                       <div 
                         onClick={() => imageInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-200 hover:border-brand-blue bg-brand-gray/30 hover:bg-brand-gray/60 rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-1.5 group"
+                        className="border-2 border-dashed border-gray-200 hover:border-teal-500 bg-gray-50/50 hover:bg-teal-50/20 rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-1 group"
                       >
-                        <div className="w-10 h-10 rounded-xl bg-white text-gray-400 group-hover:text-brand-blue flex items-center justify-center shadow-xs transition-colors">
-                          <Upload size={18} />
+                        <div className="w-9 h-9 rounded-lg bg-white text-gray-400 group-hover:text-teal-600 flex items-center justify-center border border-gray-200 shadow-2xs transition-colors">
+                          <Upload size={16} />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-gray-700 block">Click to upload an image for this question (Optional)</span>
+                          <span className="text-xs font-bold text-gray-700 block">Click to upload clinical media (Optional)</span>
                           <span className="text-[10px] text-gray-400">PNG, JPG, WebP up to 8MB</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="relative rounded-2xl overflow-hidden border border-gray-200 bg-gray-900 group max-w-sm">
+                      <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900 group max-w-sm">
                         <img 
                           src={questionForm.imageUrl} 
                           alt="Question reference" 
                           className="max-h-48 w-full object-contain p-2"
                         />
                         <div className="p-2.5 bg-white border-t border-gray-100 flex items-center justify-between text-xs">
-                          <span className="text-green-600 font-bold flex items-center gap-1">
+                          <span className="text-teal-700 font-bold flex items-center gap-1">
                             <CheckCircle2 size={13} />
                             <span>Image Attached</span>
                           </span>
@@ -945,12 +985,12 @@ export default function AdminSubjectQuestions() {
                   </div>
 
                   {/* Options */}
-                  <div className="space-y-4">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Multiple Choice Options</label>
-                    <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Multiple Choice Options</label>
+                    <div className="grid sm:grid-cols-2 gap-3">
                       {/* A */}
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-brand-blue/10 text-brand-blue font-extrabold flex items-center justify-center text-xs">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-black flex items-center justify-center text-xs">
                           A
                         </span>
                         <input 
@@ -958,13 +998,13 @@ export default function AdminSubjectQuestions() {
                           required
                           value={questionForm.optionA}
                           onChange={e => setQuestionForm({ ...questionForm, optionA: e.target.value })}
-                          placeholder="Option A string"
-                          className="w-full pl-12 pr-4 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
+                          placeholder="Option A description"
+                          className="w-full pl-11 pr-3.5 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none font-medium"
                         />
                       </div>
                       {/* B */}
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-brand-blue/10 text-brand-blue font-extrabold flex items-center justify-center text-xs">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-black flex items-center justify-center text-xs">
                           B
                         </span>
                         <input 
@@ -972,13 +1012,13 @@ export default function AdminSubjectQuestions() {
                           required
                           value={questionForm.optionB}
                           onChange={e => setQuestionForm({ ...questionForm, optionB: e.target.value })}
-                          placeholder="Option B string"
-                          className="w-full pl-12 pr-4 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
+                          placeholder="Option B description"
+                          className="w-full pl-11 pr-3.5 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none font-medium"
                         />
                       </div>
                       {/* C */}
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-brand-blue/10 text-brand-blue font-extrabold flex items-center justify-center text-xs">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-black flex items-center justify-center text-xs">
                           C
                         </span>
                         <input 
@@ -986,13 +1026,13 @@ export default function AdminSubjectQuestions() {
                           required
                           value={questionForm.optionC}
                           onChange={e => setQuestionForm({ ...questionForm, optionC: e.target.value })}
-                          placeholder="Option C string"
-                          className="w-full pl-12 pr-4 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
+                          placeholder="Option C description"
+                          className="w-full pl-11 pr-3.5 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none font-medium"
                         />
                       </div>
                       {/* D */}
                       <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-brand-blue/10 text-brand-blue font-extrabold flex items-center justify-center text-xs">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg bg-teal-50 text-teal-700 border border-teal-200 font-black flex items-center justify-center text-xs">
                           D
                         </span>
                         <input 
@@ -1000,17 +1040,17 @@ export default function AdminSubjectQuestions() {
                           required
                           value={questionForm.optionD}
                           onChange={e => setQuestionForm({ ...questionForm, optionD: e.target.value })}
-                          placeholder="Option D string"
-                          className="w-full pl-12 pr-4 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none"
+                          placeholder="Option D description"
+                          className="w-full pl-11 pr-3.5 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none font-medium"
                         />
                       </div>
                     </div>
                   </div>
 
                   {/* Correct Option */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Correct Answer Option</label>
-                    <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Correct Answer Option</label>
+                    <div className="grid grid-cols-4 gap-2.5">
                       {[
                         { idx: 0, val: 'A' },
                         { idx: 1, val: 'B' },
@@ -1021,37 +1061,45 @@ export default function AdminSubjectQuestions() {
                           key={opt.idx}
                           type="button"
                           onClick={() => setQuestionForm({ ...questionForm, correctAnswer: opt.idx })}
-                          className={`py-3.5 rounded-2xl font-bold transition-all text-sm border flex items-center justify-center gap-1.5 ${questionForm.correctAnswer === opt.idx ? 'bg-green-600 border-green-600 text-white shadow-md' : 'bg-brand-gray/50 border-gray-100 text-gray-500 hover:bg-gray-100'}`}
+                          className={`py-2.5 rounded-xl font-bold transition-all text-xs border flex items-center justify-center gap-1.5 cursor-pointer ${
+                            questionForm.correctAnswer === opt.idx 
+                              ? 'bg-teal-600 border-teal-600 text-white shadow-2xs' 
+                              : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                          }`}
                         >
-                          {questionForm.correctAnswer === opt.idx && <CheckCircle2 size={16} />}
-                          Option {opt.val}
+                          {questionForm.correctAnswer === opt.idx && <CheckCircle2 size={14} />}
+                          <span>Option {opt.val}</span>
                         </button>
                       ))}
                     </div>
                   </div>
 
                   {/* Explanation */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Explanation of Answer</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Scientific Rationale & Guideline Explanation</label>
                     <textarea 
                       rows={3}
                       value={questionForm.explanation}
                       onChange={e => setQuestionForm({ ...questionForm, explanation: e.target.value })}
-                      className="w-full px-5 py-4 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all resize-none"
+                      className="w-full px-4 py-3 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none"
                       placeholder="Enter scientific justification detailing guidelines..."
                     />
                   </div>
 
                   {/* Actions Grid */}
-                  <div className="pt-4 flex flex-col sm:flex-row gap-4">
+                  <div className="pt-3 flex flex-col sm:flex-row gap-3">
                     <button 
                       type="button"
                       disabled={submittingQuestion}
                       onClick={() => handleSaveQuestion(true)}
-                      className={`flex-grow ${editingQuestionId ? 'bg-green-600 hover:bg-green-700 text-white' : 'btn-primary'} py-4 rounded-2xl justify-center font-bold text-sm shadow-md flex items-center gap-2 cursor-pointer`}
+                      className={`flex-grow ${
+                        editingQuestionId 
+                          ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-2xs' 
+                          : 'bg-[#151B26] hover:bg-slate-800 text-white shadow-2xs'
+                      } py-3 rounded-xl justify-center font-bold text-xs transition-all flex items-center gap-2 cursor-pointer`}
                     >
-                      {submittingQuestion ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                      {editingQuestionId ? 'Update Question' : 'Save Question & Add Another'}
+                      {submittingQuestion ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                      <span>{editingQuestionId ? 'Update Question' : 'Save Question & Add Next'}</span>
                     </button>
                     {editingQuestionId && (
                       <button 
@@ -1068,7 +1116,7 @@ export default function AdminSubjectQuestions() {
                             explanation: ''
                           });
                         }}
-                        className="px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 rounded-2xl font-bold text-sm border border-gray-200 flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                        className="px-5 bg-white hover:bg-gray-100 text-gray-700 py-3 rounded-xl font-bold text-xs border border-gray-300 flex items-center justify-center gap-1.5 cursor-pointer shrink-0 transition-colors"
                       >
                         Cancel
                       </button>
@@ -1081,63 +1129,63 @@ export default function AdminSubjectQuestions() {
 
             {/* RIGHT SIDE: Questions List */}
             <div className="lg:col-span-5 space-y-6">
-              <div className="bg-white rounded-[40px] border border-gray-100 p-8 shadow-sm h-full flex flex-col animate-fade-in">
+              <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-6 shadow-2xs h-full flex flex-col">
                 
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex justify-between items-center mb-5 pb-3 border-b border-gray-100">
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">Questions in Catalog</h3>
-                    <p className="text-xs text-gray-400">Total: {questions.length} registered</p>
+                    <h3 className="text-base font-bold text-gray-900">Questions in Catalog</h3>
+                    <p className="text-[11px] text-gray-400 font-medium">Total: {questions.length} registered</p>
                   </div>
-                  <div className="w-10 h-10 bg-brand-blue/10 rounded-xl flex items-center justify-center text-brand-blue">
-                    <ListChecks size={20} />
+                  <div className="w-8 h-8 bg-teal-50 text-teal-700 border border-teal-200/60 rounded-lg flex items-center justify-center">
+                    <ListChecks size={16} />
                   </div>
                 </div>
 
-                <div className="relative mb-6">
-                  <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="relative mb-4">
+                  <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input 
                     type="text"
                     value={searchText}
                     onChange={e => setSearchText(e.target.value)}
-                    placeholder="Search scenario description..."
-                    className="w-full pl-11 pr-4 py-3 bg-brand-gray/50 rounded-2xl border-none focus:ring-2 focus:ring-brand-blue text-xs outline-none transition-all"
+                    placeholder="Search questions by keyword..."
+                    className="w-full pl-9 pr-8 py-2 bg-gray-50 rounded-xl border border-gray-200 focus:bg-white focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 text-xs outline-none transition-all"
                   />
                   {searchText && (
-                    <button onClick={() => setSearchText('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-950">
-                      <X size={14} />
+                    <button onClick={() => setSearchText('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-950">
+                      <X size={12} />
                     </button>
                   )}
                 </div>
 
-                <div className="flex-grow overflow-y-auto max-h-[550px] pr-2 space-y-4 custom-scrollbar">
+                <div className="flex-grow overflow-y-auto max-h-[550px] pr-1 space-y-3 custom-scrollbar">
                   {loadingQuestions ? (
-                    <div className="py-20 text-center text-brand-blue">
-                      <Loader2 size={36} className="animate-spin mx-auto mb-2" />
-                      <p className="text-sm font-bold">Retrieving queries...</p>
+                    <div className="py-16 text-center text-teal-600">
+                      <Loader2 size={32} className="animate-spin mx-auto mb-2" />
+                      <p className="text-xs font-bold">Retrieving questions...</p>
                     </div>
                   ) : filteredQuestions.length === 0 ? (
-                    <div className="py-20 text-center text-gray-400 italic text-sm">
+                    <div className="py-16 text-center text-gray-400 italic text-xs">
                       {searchText ? "No search matches found." : "No questions in this subject catalog yet."}
                     </div>
                   ) : (
                     filteredQuestions.map((q, index) => {
                       const letters = ['A', 'B', 'C', 'D'];
                       return (
-                        <div key={q.id} className="p-4 rounded-2xl border border-gray-100 bg-brand-gray/30 hover:bg-white hover:shadow-md transition-all relative group">
-                          <div className="absolute top-4 right-4 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all">
+                        <div key={q.id} className="p-3.5 rounded-xl border border-gray-200/80 bg-gray-50/60 hover:bg-white hover:border-gray-300 hover:shadow-2xs transition-all relative group">
+                          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                             <button 
                               onClick={() => handleStartEditQuestion(q)}
-                              className="p-1.5 bg-blue-50 text-brand-blue rounded-lg hover:bg-brand-blue hover:text-white transition-all shadow-sm cursor-pointer"
+                              className="p-1.5 bg-white text-gray-700 hover:text-teal-700 hover:bg-teal-50 border border-gray-200 rounded-lg transition-all shadow-2xs cursor-pointer"
                               title="Edit Question"
                             >
-                              <Edit2 size={12} />
+                              <Edit2 size={11} />
                             </button>
                             <button 
                               onClick={() => confirmDeleteQuestion(q)}
-                              className="p-1.5 bg-red-50 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm cursor-pointer"
+                              className="p-1.5 bg-white text-rose-600 hover:bg-rose-50 border border-gray-200 rounded-lg transition-all shadow-2xs cursor-pointer"
                               title="Delete from Catalog"
                             >
-                              <Trash2 size={12} />
+                              <Trash2 size={11} />
                             </button>
                           </div>
 
@@ -1196,61 +1244,70 @@ export default function AdminSubjectQuestions() {
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: 'spring', duration: 0.4 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl z-10 border border-gray-100"
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-md bg-white rounded-2xl p-6 sm:p-7 shadow-2xl z-10 border border-gray-200"
             >
               <button 
                 onClick={() => setShowAddSubject(false)}
-                className="absolute top-6 right-6 p-1.5 hover:bg-brand-gray rounded-full text-gray-400 hover:text-gray-900 transition-colors"
+                className="absolute top-5 right-5 p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors"
                 disabled={submittingSubject}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex gap-3 items-center mb-6">
-                <div className="w-12 h-12 bg-brand-blue/10 rounded-2xl flex items-center justify-center text-brand-blue shrink-0">
-                  <FolderPlus size={24} />
+              <div className="flex gap-3 items-center mb-5 pb-3 border-b border-gray-100">
+                <div className="w-10 h-10 bg-teal-50 text-teal-700 border border-teal-200 rounded-xl flex items-center justify-center shrink-0">
+                  <FolderPlus size={20} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">Create New Subject</h3>
-                  <p className="text-xs text-gray-400">Add subject grouping for exercises</p>
+                  <h3 className="text-lg font-bold text-gray-900">Create New Subject</h3>
+                  <p className="text-[11px] text-gray-400 font-medium">Add a new clinical group for student practice</p>
                 </div>
               </div>
 
-              <form onSubmit={handleCreateSubject} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Subject Name</label>
+              <form onSubmit={handleCreateSubject} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Subject Name</label>
                   <input 
                     type="text"
                     required
                     value={newSubject.name}
                     onChange={e => setNewSubject({ ...newSubject, name: e.target.value })}
-                    placeholder="e.g. Physiology, Ophthalmology, Anatomy"
-                    className="w-full px-5 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold text-gray-800"
+                    placeholder="e.g. Cardiology, Ophthalmology, Neurology"
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all font-semibold text-gray-800"
                     disabled={submittingSubject}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Subject Details (Description)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Description & Scope</label>
                   <textarea 
                     rows={3}
                     value={newSubject.details}
                     onChange={e => setNewSubject({ ...newSubject, details: e.target.value })}
-                    placeholder="Detailed explanation of what this subject covers..."
-                    className="w-full px-5 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all resize-none text-gray-600"
+                    placeholder="Detailed explanation of clinical scope covered..."
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none text-gray-700 font-normal"
                     disabled={submittingSubject}
                   />
                 </div>
 
-                <button 
-                  type="submit"
-                  disabled={submittingSubject}
-                  className="w-full btn-primary py-4 rounded-2xl justify-center text-sm font-bold shadow-md flex items-center gap-2"
-                >
-                  {submittingSubject ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                  Save Subject
-                </button>
+                <div className="pt-2 flex gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => setShowAddSubject(false)}
+                    className="flex-1 py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs border border-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={submittingSubject}
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingSubject ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                    <span>Save Subject</span>
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
@@ -1268,7 +1325,7 @@ export default function AdminSubjectQuestions() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => !submittingSubject && setShowEditSubject(false)}
-              className="absolute inset-0 bg-brand-dark/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#0B1C30]/50 backdrop-blur-xs"
             />
 
             {/* Form Modal */}
@@ -1276,61 +1333,70 @@ export default function AdminSubjectQuestions() {
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: 'spring', duration: 0.4 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl z-10 border border-gray-100"
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-md bg-white rounded-2xl p-6 sm:p-7 shadow-2xl z-10 border border-gray-200"
             >
               <button 
                 onClick={() => setShowEditSubject(false)}
-                className="absolute top-6 right-6 p-1.5 hover:bg-brand-gray rounded-full text-gray-400 hover:text-gray-900 transition-colors"
+                className="absolute top-5 right-5 p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors"
                 disabled={submittingSubject}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex gap-3 items-center mb-6">
-                <div className="w-12 h-12 bg-blue-50 text-brand-blue rounded-2xl flex items-center justify-center shrink-0">
-                  <Edit2 size={22} />
+              <div className="flex gap-3 items-center mb-5 pb-3 border-b border-gray-100">
+                <div className="w-10 h-10 bg-teal-50 text-teal-700 border border-teal-200 rounded-xl flex items-center justify-center shrink-0">
+                  <Edit2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-gray-900">Edit Subject Details</h3>
-                  <p className="text-xs text-gray-400">Update subject settings securely</p>
+                  <h3 className="text-lg font-bold text-gray-900">Edit Subject Details</h3>
+                  <p className="text-[11px] text-gray-400 font-medium">Update subject information</p>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveEditSubject} className="space-y-5">
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Subject Name</label>
+              <form onSubmit={handleSaveEditSubject} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Subject Name</label>
                   <input 
                     type="text"
                     required
                     value={editSubjectForm.name}
                     onChange={e => setEditSubjectForm({ ...editSubjectForm, name: e.target.value })}
                     placeholder="e.g. Cardiology"
-                    className="w-full px-5 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all font-bold text-gray-800"
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all font-semibold text-gray-800"
                     disabled={submittingSubject}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Subject Details (Description)</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Subject Scope Description</label>
                   <textarea 
                     rows={3}
                     value={editSubjectForm.details}
                     onChange={e => setEditSubjectForm({ ...editSubjectForm, details: e.target.value })}
                     placeholder="Detailed description of coverage..."
-                    className="w-full px-5 py-3.5 bg-brand-gray/50 rounded-2xl border border-gray-100 text-sm focus:ring-2 focus:ring-brand-blue outline-none transition-all resize-none text-gray-600"
+                    className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-300 text-sm focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all resize-none text-gray-700 font-normal"
                     disabled={submittingSubject}
                   />
                 </div>
 
-                <button 
-                  type="submit"
-                  disabled={submittingSubject}
-                  className="w-full bg-brand-blue hover:bg-opacity-95 text-white py-4 rounded-2xl justify-center text-sm font-bold shadow-md flex items-center gap-2 cursor-pointer"
-                >
-                  {submittingSubject ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                  Update Subject Config
-                </button>
+                <div className="pt-2 flex gap-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => setShowEditSubject(false)}
+                    className="flex-1 py-2.5 px-4 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs border border-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    disabled={submittingSubject}
+                    className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {submittingSubject ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                    <span>Update Subject</span>
+                  </button>
+                </div>
               </form>
             </motion.div>
           </div>
@@ -1347,7 +1413,7 @@ export default function AdminSubjectQuestions() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSubjectToDelete(null)}
-              className="absolute inset-0 bg-brand-dark/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#0B1C30]/50 backdrop-blur-xs"
             />
 
             {/* Modal Box */}
@@ -1355,35 +1421,35 @@ export default function AdminSubjectQuestions() {
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: 'spring', duration: 0.4 }}
-              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl z-10 border border-red-100"
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl z-10 border border-gray-200"
             >
               <button 
                 onClick={() => setSubjectToDelete(null)}
-                className="absolute top-6 right-6 p-1.5 hover:bg-brand-gray rounded-full text-gray-400 hover:text-gray-900 transition-colors"
+                className="absolute top-5 right-5 p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex gap-4 items-start mb-6">
-                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shrink-0">
-                  <Trash2 size={22} className="animate-bounce" />
+              <div className="flex gap-3 items-start mb-4">
+                <div className="w-10 h-10 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl flex items-center justify-center shrink-0">
+                  <Trash2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">Delete Subject?</h3>
-                  <p className="text-xs text-gray-400 mt-0.5 font-medium">This operation cannot be undone</p>
+                  <h3 className="text-base font-bold text-gray-900">Delete Subject?</h3>
+                  <p className="text-[11px] text-gray-400 font-medium">This operation cannot be undone</p>
                 </div>
               </div>
 
-              <div className="bg-red-50/50 rounded-2xl p-4 border border-red-100/50 text-xs text-red-800 mb-6 leading-relaxed">
-                Are you absolutely sure you want to permanently delete the medical subject <span className="font-bold">"{subjectToDelete.name}"</span>? All clinical questions associated with this subject will be removed from the portal database.
+              <div className="bg-rose-50/60 rounded-xl p-3 border border-rose-100 text-xs text-rose-800 mb-5 leading-relaxed">
+                Are you sure you want to delete <span className="font-bold">"{subjectToDelete.name}"</span>? All questions associated with this subject will be removed.
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setSubjectToDelete(null)}
-                  className="flex-1 py-3 px-4 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-2xl text-sm transition-all cursor-pointer border border-gray-150 text-center"
+                  className="flex-1 py-2 px-3 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs transition-colors border border-gray-300 text-center"
                 >
                   Cancel
                 </button>
@@ -1393,10 +1459,10 @@ export default function AdminSubjectQuestions() {
                     handleDeleteSubject(subjectToDelete.id);
                     setSubjectToDelete(null);
                   }}
-                  className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center"
+                  className="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-2xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer"
                 >
-                  <Trash2 size={16} />
-                  Confirm
+                  <Trash2 size={14} />
+                  <span>Confirm</span>
                 </button>
               </div>
             </motion.div>
@@ -1414,7 +1480,7 @@ export default function AdminSubjectQuestions() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setQuestionToDelete(null)}
-              className="absolute inset-0 bg-brand-dark/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-[#0B1C30]/50 backdrop-blur-xs"
             />
 
             {/* Modal Box */}
@@ -1422,38 +1488,38 @@ export default function AdminSubjectQuestions() {
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              transition={{ type: 'spring', duration: 0.4 }}
-              className="relative w-full max-w-sm bg-white rounded-[32px] p-8 shadow-2xl z-10 border border-red-100"
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="relative w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl z-10 border border-gray-200"
             >
               <button 
                 onClick={() => setQuestionToDelete(null)}
-                className="absolute top-6 right-6 p-1.5 hover:bg-brand-gray rounded-full text-gray-400 hover:text-gray-900 transition-colors"
+                className="absolute top-5 right-5 p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-700 transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
 
-              <div className="flex gap-4 items-start mb-6">
-                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center shrink-0">
-                  <Trash2 size={22} className="animate-pulse" />
+              <div className="flex gap-3 items-start mb-4">
+                <div className="w-10 h-10 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl flex items-center justify-center shrink-0">
+                  <Trash2 size={18} />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">Delete Question?</h3>
-                  <p className="text-xs text-gray-400 mt-0.5 font-medium">This operation cannot be undone</p>
+                  <h3 className="text-base font-bold text-gray-900">Delete Question?</h3>
+                  <p className="text-[11px] text-gray-400 font-medium">This operation cannot be undone</p>
                 </div>
               </div>
 
-              <div className="bg-red-50/50 rounded-2xl p-4 border border-red-100/50 text-xs text-red-800 mb-6 leading-relaxed max-h-[140px] overflow-y-auto">
+              <div className="bg-rose-50/60 rounded-xl p-3 border border-rose-100 text-xs text-rose-800 mb-5 leading-relaxed max-h-[120px] overflow-y-auto">
                 Are you sure you want to permanently delete this clinical question?
-                <p className="mt-2 text-gray-600 italic bg-white/90 p-2 rounded-xl border border-red-50 font-normal">
+                <p className="mt-1.5 text-gray-600 italic bg-white p-2 rounded-lg border border-rose-100 font-normal">
                   "{questionToDelete.text}"
                 </p>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex gap-2.5">
                 <button
                   type="button"
                   onClick={() => setQuestionToDelete(null)}
-                  className="flex-1 py-3 px-4 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-2xl text-sm transition-all cursor-pointer border border-gray-150 text-center"
+                  className="flex-1 py-2 px-3 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-xl text-xs transition-colors border border-gray-300 text-center"
                 >
                   Cancel
                 </button>
@@ -1463,10 +1529,10 @@ export default function AdminSubjectQuestions() {
                     handleDeleteQuestion(questionToDelete.id);
                     setQuestionToDelete(null);
                   }}
-                  className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-2xl text-sm shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 text-center"
+                  className="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow-2xs transition-colors flex items-center justify-center gap-1.5 text-center cursor-pointer"
                 >
-                  <Trash2 size={16} />
-                  Confirm
+                  <Trash2 size={14} />
+                  <span>Confirm</span>
                 </button>
               </div>
             </motion.div>

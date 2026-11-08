@@ -3,6 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (function() {
+        if (typeof window !== 'undefined') {
+          // Guard AbortController.prototype.abort from throwing synchronous AbortError
+          if (typeof AbortController !== 'undefined' && AbortController.prototype && AbortController.prototype.abort) {
+            var origAbort = AbortController.prototype.abort;
+            AbortController.prototype.abort = function(reason) {
+              try {
+                return origAbort.apply(this, arguments);
+              } catch (e) {
+                if (e && (e.name === 'AbortError' || (e.message && e.message.indexOf('aborted') !== -1))) {
+                  return;
+                }
+                throw e;
+              }
+            };
+          }
+
+          function isIgnorableError(err) {
+            if (!err) return false;
+            var msg = (err.message || String(err)).toLowerCase();
+            var name = (err.name || '').toLowerCase();
+            return name === 'aborterror' ||
+                   msg.indexOf('signal is aborted') !== -1 ||
+                   msg.indexOf('aborterror') !== -1 ||
+                   msg.indexOf('failed to fetch') !== -1 ||
+                   msg.indexOf('networkerror') !== -1 ||
+                   msg.indexOf('load failed') !== -1 ||
+                   msg.indexOf('missing or insufficient permissions') !== -1;
+          }
+
+          window.addEventListener('unhandledrejection', function(event) {
+            if (isIgnorableError(event.reason)) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            }
+          }, true);
+
+          window.addEventListener('error', function(event) {
+            if (isIgnorableError(event.error) || isIgnorableError(event.message)) {
+              event.preventDefault();
+              event.stopImmediatePropagation();
+            }
+          }, true);
+        }
+      })();
+    </script>
     <title>Promedo - Online Learning Platform</title>
     <meta name="description" content="Your trusted partner for a successful GCC licensing journey. Features authentic Prometric computer-based mock test simulators, candidate performance analytics, and clinical recall preparation." />
     <meta property="og:title" content="Promedo - Online Learning Platform" />

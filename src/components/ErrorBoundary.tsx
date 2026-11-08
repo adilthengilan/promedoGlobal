@@ -16,10 +16,33 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   static getDerivedStateFromError(error: Error): State {
+    const msg = (error?.message || '').toLowerCase();
+    const name = (error?.name || '').toLowerCase();
+    if (
+      name === 'aborterror' ||
+      msg.includes('signal is aborted') ||
+      msg.includes('aborterror') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror')
+    ) {
+      return { hasError: false, error: null };
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    const msg = (error?.message || '').toLowerCase();
+    const name = (error?.name || '').toLowerCase();
+    if (
+      name === 'aborterror' ||
+      msg.includes('signal is aborted') ||
+      msg.includes('aborterror') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror')
+    ) {
+      console.warn('Suppressed transient network error in ErrorBoundary:', error.message);
+      return;
+    }
     console.error('Uncaught error:', error, errorInfo);
   }
 

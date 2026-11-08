@@ -93,6 +93,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
   const [importedCount, setImportedCount] = useState<number>(0);
   const [createdExamSummary, setCreatedExamSummary] = useState<{ catalogTitle: string; count: number }[]>([]);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Fetch available catalogs (Subject Question Banks & Mock Test Catalogs)
   useEffect(() => {
@@ -396,14 +397,15 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
   // Main Generator Handler
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
 
     if (selectedCatalogIds.size === 0 || totalAllocatedCount === 0) {
-      alert("Please select at least one catalog and enter the question count to pick.");
+      setModalError("Please select at least one catalog and enter the question count to pick.");
       return;
     }
 
     if (mode === 'create_exam' && !examTitle.trim()) {
-      alert("Please enter a title for the new mock test exam.");
+      setModalError("Please enter a title for the new mock test exam.");
       return;
     }
 
@@ -456,7 +458,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
       }
 
       if (sampledQuestions.length === 0) {
-        alert("No valid questions could be extracted. Please check the selected catalogs.");
+        setModalError("No valid questions could be extracted. Please check the selected catalogs.");
         setGenerating(false);
         return;
       }
@@ -523,7 +525,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
       }
     } catch (err) {
       console.error("Error generating exam from catalogs:", err);
-      alert("Failed to generate exam. Please try again.");
+      setModalError("Failed to generate exam. Please check catalog data and try again.");
     } finally {
       setGenerating(false);
     }
@@ -534,6 +536,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
     setCreatedExamId(null);
     setImportedCount(0);
     setCreatedExamSummary([]);
+    setModalError(null);
   };
 
   if (!isOpen) return null;
@@ -545,26 +548,26 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
           initial={{ opacity: 0, scale: 0.96, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: 20 }}
-          className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-hidden border border-gray-100 my-6"
+          className="relative w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 my-6"
         >
           {/* Header */}
-          <div className="p-6 sm:p-8 bg-gradient-to-r from-[#0B1C30] via-[#162B48] to-[#006591] text-white flex items-center justify-between">
+          <div className="p-6 sm:p-8 bg-[#151B26] text-white flex items-center justify-between border-b border-white/10">
             <div className="flex items-center gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 shrink-0 shadow-inner">
-                <Sparkles className="text-amber-400" size={24} />
+              <div className="w-12 h-12 rounded-2xl bg-[#00A389]/20 text-[#00A389] flex items-center justify-center border border-[#00A389]/30 shrink-0 shadow-inner">
+                <Sparkles size={24} />
               </div>
               <div>
                 <h3 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
                   {mode === 'import_to_editor' ? 'Import Custom Question Counts from Catalogs' : 'Create Exam with Custom Catalog Counts'}
                 </h3>
-                <p className="text-xs text-blue-200 mt-0.5 font-medium">
+                <p className="text-xs text-gray-400 mt-0.5 font-medium">
                   Select catalogs and specify exact question count per catalog (e.g., Catalog 1: 10 Qs, Catalog 2: 50 Qs, Catalog 3: 20 Qs).
                 </p>
               </div>
             </div>
 
             <button 
-              onClick={onClose}
+              onClick={() => { setModalError(null); onClose(); }}
               className="p-2.5 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all cursor-pointer shrink-0"
               title="Close modal"
             >
@@ -574,6 +577,20 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
 
           {/* Modal Body */}
           <div className="p-5 sm:p-8 max-h-[82vh] overflow-y-auto">
+            {modalError && (
+              <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-between shadow-xs">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle size={18} className="text-rose-600 shrink-0" />
+                  <span>{modalError}</span>
+                </div>
+                <button 
+                  onClick={() => setModalError(null)}
+                  className="p-1 rounded-lg hover:bg-rose-100 text-rose-600 cursor-pointer"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
             {isSuccess ? (
               <div className="text-center py-8 space-y-6">
                 <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">

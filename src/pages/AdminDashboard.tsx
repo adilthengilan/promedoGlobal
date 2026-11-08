@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight } from 'lucide-react';
+import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight, Menu, Moon, Sun, ChevronDown, ChevronRight, Minus, TrendingUp, TrendingDown, Layers, LayoutGrid, SlidersHorizontal, Settings, Activity, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ExamGeneratorModal } from '../components/ExamGeneratorModal';
@@ -12,6 +12,12 @@ import { Testimonial, fetchAllTestimonials, addAdminTestimonial, verifyAndApprov
 import { AvatarPicker, FEMALE_AVATAR, MALE_AVATAR, FEMALE_CARTOON_AVATARS, MALE_CARTOON_AVATARS } from '../components/AvatarPicker';
 import { EditTestimonialModal } from '../components/EditTestimonialModal';
 import StudentsPortalManager from '../components/StudentsPortalManager';
+import AdminQuestionBankManager from '../components/AdminQuestionBankManager';
+import AdminOverviewDashboard from '../components/AdminOverviewDashboard';
+import AdminSubjectQuestions from './AdminSubjectQuestions';
+import AdminUserManagement from '../components/AdminUserManagement';
+import AdminEmailSender from '../components/AdminEmailSender';
+import AdminUserActivities from '../components/AdminUserActivities';
 
 interface AppointmentNotification {
   id: string;
@@ -25,11 +31,12 @@ interface AppointmentNotification {
 }
 
 const AdminDashboard = () => {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, logout, user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
   const [mocktests, setMocktests] = useState<any[]>([]);
+  const [mockAttempts, setMockAttempts] = useState<any[]>([]);
   const [sales, setSales] = useState<any[]>([]);
   const [reviews, setReviews] = useState<any[]>([]);
   const [hallOfFamePosters, setHallOfFamePosters] = useState<any[]>([]);
@@ -55,8 +62,12 @@ const AdminDashboard = () => {
   });
   const [directPosterUrl, setDirectPosterUrl] = useState('');
   const [directDoctorName, setDirectDoctorName] = useState('');
-  const [activeTab, setActiveTab] = useState('mocktests');
-
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [directEmailTarget, setDirectEmailTarget] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dashboardsSubmenuOpen, setDashboardsSubmenuOpen] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
   // User Management Sub-Tab ('user-login' | 'all-users')
   const [userManagementSubTab, setUserManagementSubTab] = useState<'user-login' | 'all-users'>('user-login');
   const [userLogins, setUserLogins] = useState<CandidateLoginRecord[]>([]);
@@ -96,7 +107,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
-    type: 'course' | 'mocktest' | 'testimonial' | null;
+    type: 'course' | 'mocktest' | 'testimonial' | 'appointment' | 'ad' | 'poster' | null;
     id: string | null;
     title: string | null;
   }>({
@@ -305,6 +316,13 @@ const AdminDashboard = () => {
 
       const salesSnapshot = await getDocs(query(collection(db, 'enrollments'), orderBy('enrolledAt', 'desc')));
       setSales(salesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+
+      try {
+        const attemptsSnapshot = await getDocs(collection(db, 'mockAttempts'));
+        setMockAttempts(attemptsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      } catch (e) {
+        console.warn("Could not fetch mockAttempts from Firestore:", e);
+      }
 
       try {
         const reviewsSnapshot = await getDocs(collection(db, 'reviews'));
@@ -530,25 +548,13 @@ const AdminDashboard = () => {
   }, {});
   const topExamName = Object.entries(examCounts).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] || 'DHA (Dubai Health Authority)';
 
-  const handleDeleteAppointment = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this booked appointment?")) return;
-    try {
-      try {
-        await deleteDoc(doc(db, 'appointments', id));
-      } catch (e) {
-        console.warn("Firestore delete appointment error:", e);
-      }
-      try {
-        const local = JSON.parse(localStorage.getItem('local_appointments') || '[]');
-        const filtered = local.filter((a: any) => a.id !== id);
-        localStorage.setItem('local_appointments', JSON.stringify(filtered));
-      } catch (e) {}
-
-      setAppointments(prev => prev.filter(a => a.id !== id));
-      alert("Appointment booking deleted successfully!");
-    } catch (err) {
-      console.error("Error removing appointment:", err);
-    }
+  const handleDeleteAppointment = (id: string, name?: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'appointment',
+      id,
+      title: name || 'this booked appointment'
+    });
   };
 
   const handleToggleAppointmentStatus = async (id: string, currentStatus: string) => {
@@ -567,8 +573,10 @@ const AdminDashboard = () => {
       } catch (e) {}
 
       setAppointments(prev => prev.map(a => a.id === id ? { ...a, status: nextStatus } : a));
+      showFeedback(`Appointment status updated to ${nextStatus}.`, "success");
     } catch (err) {
       console.error("Error updating appointment status:", err);
+      showFeedback("Failed to update appointment status.", "error");
     }
   };
 
@@ -580,7 +588,7 @@ const AdminDashboard = () => {
         ...newAd,
         createdAt: new Date().toISOString()
       });
-      alert("New promotional advertisement published to platform!");
+      showFeedback("New promotional advertisement published to platform!", "success");
       setNewAd({
         title: '',
         subtitle: '',
@@ -593,43 +601,37 @@ const AdminDashboard = () => {
       fetchData();
     } catch (err) {
       console.error("Error creating ad:", err);
-      alert("Failed to publish advertisement.");
+      showFeedback("Failed to publish advertisement.", "error");
     }
   };
 
-  const handleDeleteAd = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this advertisement?")) return;
-    try {
-      await deleteDoc(doc(db, 'ads', id));
-      alert("Advertisement removed successfully!");
-      fetchData();
-    } catch (err) {
-      console.error("Error deleting ad:", err);
-      alert("Failed to delete ad.");
-    }
+  const handleDeleteAd = (id: string, title?: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'ad',
+      id,
+      title: title || 'this advertisement banner'
+    });
   };
 
   const handleApproveReview = async (id: string) => {
     try {
       await updateDoc(doc(db, 'reviews', id), { status: 'approved' });
-      alert("Review & poster approved for Hall of Fame!");
+      showFeedback("Review & poster approved for Hall of Fame!", "success");
       fetchData();
     } catch (err) {
       console.error("Error approving review:", err);
-      alert("Failed to approve review.");
+      showFeedback("Failed to approve review.", "error");
     }
   };
 
-  const handleDeleteReview = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this review/poster submission?")) return;
-    try {
-      await deleteDoc(doc(db, 'reviews', id));
-      alert("Review deleted successfully!");
-      fetchData();
-    } catch (err) {
-      console.error("Error deleting review:", err);
-      alert("Failed to delete review.");
-    }
+  const handleDeleteReview = (id: string, name?: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'testimonial',
+      id,
+      title: name || 'this review/poster submission'
+    });
   };
 
   const handleAddAdminTestimonial = async (e: React.FormEvent) => {
@@ -768,16 +770,13 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDeleteHofPoster = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this poster from Hall of Fame?")) return;
-    try {
-      await deleteDoc(doc(db, 'halloffame', id));
-      alert("Poster removed!");
-      fetchData();
-    } catch (err) {
-      console.error("Error deleting poster:", err);
-      alert("Failed to delete poster.");
-    }
+  const handleDeleteHofPoster = (id: string, name?: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      type: 'poster',
+      id,
+      title: name || 'this Hall of Fame poster'
+    });
   };
 
   const handleAddDirectPoster = async (e: React.FormEvent) => {
@@ -789,13 +788,13 @@ const AdminDashboard = () => {
         name: directDoctorName || 'Achiever Doctor',
         createdAt: new Date().toISOString()
       });
-      alert("New poster added to Hall of Fame!");
+      showFeedback("New poster added to Hall of Fame!", "success");
       setDirectPosterUrl('');
       setDirectDoctorName('');
       fetchData();
     } catch (err) {
       console.error("Error adding poster:", err);
-      alert("Failed to add poster.");
+      showFeedback("Failed to add poster.", "error");
     }
   };
 
@@ -917,6 +916,27 @@ const AdminDashboard = () => {
         showFeedback("Testimonial review deleted successfully.", "success");
         const updatedList = await fetchAllTestimonials();
         setTestimonialsList(updatedList);
+      } else if (type === 'appointment') {
+        try {
+          await deleteDoc(doc(db, 'appointments', id));
+        } catch (e) {
+          console.warn("Firestore delete appointment error:", e);
+        }
+        try {
+          const local = JSON.parse(localStorage.getItem('local_appointments') || '[]');
+          const filtered = local.filter((a: any) => a.id !== id);
+          localStorage.setItem('local_appointments', JSON.stringify(filtered));
+        } catch (e) {}
+        setAppointments(prev => prev.filter(a => a.id !== id));
+        showFeedback("Appointment booking removed successfully!", "success");
+      } else if (type === 'ad') {
+        await deleteDoc(doc(db, 'ads', id));
+        showFeedback("Advertisement removed successfully!", "success");
+        await fetchData();
+      } else if (type === 'poster') {
+        await deleteDoc(doc(db, 'halloffame', id));
+        showFeedback("Poster removed from Hall of Fame!", "success");
+        await fetchData();
       }
       setDeleteConfirm({ isOpen: false, type: null, id: null, title: null });
     } catch (err: any) {
@@ -973,62 +993,363 @@ const AdminDashboard = () => {
     );
   }
 
+  // Dynamic Recent Activities feed from actual appointments, user logins, and reviews
+  const dynamicRecentActivities = [
+    ...appointments.slice(0, 3).map((a, i) => ({
+      id: `appt-${a.id || i}`,
+      initials: (a.fullName || 'Candidate').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'CA',
+      name: a.fullName || 'Candidate',
+      action: `booked consultation for ${a.examPreparingFor || 'Prometric'} (${a.status || 'Pending'})`,
+      timeAgo: a.createdAt ? new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `${(i + 1) * 7} min ago`,
+      color: i % 2 === 0 ? 'bg-emerald-600' : 'bg-blue-600'
+    })),
+    ...userLogins.slice(0, 3).map((u, i) => ({
+      id: `login-${u.id || i}`,
+      initials: (u.name || 'User').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'US',
+      name: u.name || 'Candidate',
+      action: `registered for ${u.examPreparingFor || 'GCC Licensing'} Mock Simulator`,
+      timeAgo: u.createdAt ? new Date(u.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : `${(i + 2) * 12} min ago`,
+      color: 'bg-teal-600'
+    })),
+    ...testimonialsList.slice(0, 2).map((t, i) => ({
+      id: `rev-${t.id || i}`,
+      initials: (t.name || 'Doctor').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'DR',
+      name: t.name || 'Doctor',
+      action: `reviewed: "${(t.text || '').slice(0, 45)}..."`,
+      timeAgo: `${(i + 1)} hour ago`,
+      color: 'bg-amber-500'
+    }))
+  ].slice(0, 5);
+
   return (
-    <div className="min-h-screen pt-32 pb-20 bg-brand-gray/30">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-brand-dark rounded-2xl flex items-center justify-center text-white shadow-md">
-              <LayoutDashboard size={24} />
+    <div className={`min-h-screen flex bg-[#F5F7FB] ${darkMode ? 'dark bg-slate-900 text-slate-100' : ''} text-gray-800 antialiased`}>
+      {/* 1. UStudy Dark Midnight Indigo Left Sidebar */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} shrink-0 bg-[#100B38] text-slate-300 transition-all duration-200 flex flex-col justify-between border-r border-[#1F1752] sticky top-0 h-screen z-40 select-none`}>
+        {/* Top: Brand Header */}
+        <div className="p-4 sm:p-5 flex items-center justify-between">
+          <div 
+            onClick={() => setActiveTab('dashboard')}
+            className="flex items-center gap-3 cursor-pointer group"
+          >
+            {/* UStudy Shield Gradient Badge */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6355E6] to-[#8B5CF6] text-white font-black flex items-center justify-center text-lg shadow-md shadow-[#6355E6]/30">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
+                <path d="M9 12l2 2 4-4" />
+              </svg>
             </div>
-            <div>
-              <h1 className="text-4xl font-bold text-brand-dark">Admin Panel</h1>
-              <p className="text-gray-500 text-sm mt-0.5">Manage users, catalog, sales & real-time appointment bookings.</p>
+            {sidebarOpen && (
+              <div className="flex items-center gap-1.5">
+                <span className="font-black text-white text-xl tracking-tight">UStudy</span>
+              </div>
+            )}
+          </div>
+          {sidebarOpen && (
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="text-[#8A85B2] hover:text-white p-1 rounded-lg cursor-pointer"
+              title="Collapse"
+            >
+              <ChevronDown size={16} className="rotate-90" />
+            </button>
+          )}
+        </div>
+
+        {/* Sidebar Navigation Items */}
+        <div className="flex-1 overflow-y-auto px-3.5 py-2 space-y-5 text-xs scrollbar-thin">
+          {/* MENU SECTION */}
+          <div className="space-y-1">
+            {sidebarOpen && (
+              <p className="px-3 text-[11px] font-bold tracking-wider text-[#8A85B2] mb-2">
+                Menu
+              </p>
+            )}
+
+            {/* Dashboards */}
+            <button
+              onClick={() => setActiveTab('dashboard')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'dashboard' 
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <LayoutGrid size={17} className={activeTab === 'dashboard' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Dashboards</span>}
+              </div>
+              {sidebarOpen && (
+                <ChevronDown size={14} className="text-[#8A85B2]" />
+              )}
+            </button>
+
+            {/* Question Builder (Authoring Suite) */}
+            <button
+              onClick={() => setActiveTab('question-builder')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'question-builder' 
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Question Builder - Author questions, 4 options, rationales & diagrams"
+            >
+              <div className="flex items-center gap-3">
+                <FileText size={17} className={activeTab === 'question-builder' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Question Builder</span>}
+              </div>
+              {sidebarOpen && (
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#6355E6]/30 text-purple-200 border border-[#6355E6]/40">
+                  Builder
+                </span>
+              )}
+            </button>
+
+            {/* Question Bank (Students Portal / App Pages) */}
+            <button
+              onClick={() => setActiveTab('students-portal')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'students-portal' 
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Question Bank - Subject folders, custom modules, image bank & simulators"
+            >
+              <div className="flex items-center gap-3">
+                <Layers size={17} className={activeTab === 'students-portal' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Question Bank</span>}
+              </div>
+            </button>
+
+            {/* User Management */}
+            <button
+              onClick={() => setActiveTab('user-management')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'user-management' || activeTab === 'users'
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Manage LMS Candidates, Students, Roles & Permissions"
+            >
+              <div className="flex items-center gap-3">
+                <Users size={17} className={activeTab === 'user-management' || activeTab === 'users' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>User Management</span>}
+              </div>
+            </button>
+
+            {/* Email Sender */}
+            <button
+              onClick={() => setActiveTab('email-sender')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'email-sender' 
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Compose & Send Broadcast Emails to Learners"
+            >
+              <div className="flex items-center gap-3">
+                <Mail size={17} className={activeTab === 'email-sender' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Email Sender</span>}
+              </div>
+            </button>
+
+            {/* User Activities */}
+            <button
+              onClick={() => setActiveTab('user-activities')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'user-activities' 
+                  ? 'bg-[#241B5C] text-white shadow-xs' 
+                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Real-Time Student Activity Stream, Quiz & Exam Audit Logs"
+            >
+              <div className="flex items-center gap-3">
+                <Activity size={17} className={activeTab === 'user-activities' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>User Activities</span>}
+              </div>
+            </button>
+          </div>
+
+          {/* HELP SECTION */}
+          <div className="space-y-1 pt-2">
+            {sidebarOpen && (
+              <p className="px-3 text-[11px] font-bold tracking-wider text-[#8A85B2] mb-2">
+                Help
+              </p>
+            )}
+
+            <button
+              onClick={() => setActiveTab('ads')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'ads' ? 'bg-[#241B5C] text-white shadow-xs' : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Manage Platform Advertisements and Banners"
+            >
+              <div className="flex items-center gap-3">
+                <Megaphone size={17} className={activeTab === 'ads' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Ads List</span>}
+              </div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('halloffame')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'halloffame' ? 'bg-[#241B5C] text-white shadow-xs' : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+              }`}
+              title="Manage Candidate Reviews & Hall of Fame Testimonials"
+            >
+              <div className="flex items-center gap-3">
+                <Star size={17} className={activeTab === 'halloffame' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                {sidebarOpen && <span>Testimonial</span>}
+              </div>
+            </button>
+          </div>
+
+          {/* Bottom Promo Card matching screenshot */}
+          {sidebarOpen && (
+            <div className="bg-[#201755] border border-white/10 rounded-2xl p-4 text-white relative shadow-lg">
+              <button 
+                className="absolute top-2.5 right-2.5 text-gray-400 hover:text-white cursor-pointer"
+                title="Dismiss"
+              >
+                <X size={14} />
+              </button>
+              <p className="text-xs font-black text-white mb-0.5">New Course</p>
+              <p className="text-[10px] text-gray-300 leading-tight mb-3">
+                Check out the new dashboard view. Pages now load faster.
+              </p>
+
+              {/* Video Thumbnail with Play Button */}
+              <div className="relative rounded-xl overflow-hidden mb-3 aspect-video bg-indigo-900 border border-white/15">
+                <img 
+                  src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=300&auto=format&fit=crop&q=80" 
+                  alt="Course Preview" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-white/90 text-[#6355E6] flex items-center justify-center shadow-md">
+                    <Play size={14} className="fill-current ml-0.5" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <button className="text-[11px] font-bold text-gray-400 hover:text-white cursor-pointer">
+                  Dismiss
+                </button>
+                <button 
+                  onClick={() => navigate('/adminlandingpage/subjects')}
+                  className="px-3 py-1 bg-[#6355E6] hover:bg-[#5344D5] text-white text-[10px] font-bold rounded-lg shadow-sm cursor-pointer"
+                >
+                  What's new?
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar Footer User Card matching screenshot */}
+        <div className="p-3.5 border-t border-[#1F1752] bg-[#0C082D] flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 p-0.5 overflow-hidden shrink-0">
+                <img 
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" 
+                  alt="Profile" 
+                  className="w-full h-full object-cover rounded-full"
+                />
+              </div>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0C082D]" />
+            </div>
+            {sidebarOpen && (
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black text-white truncate">
+                  Neurotic Spy
+                </p>
+                <p className="text-[10px] text-[#8A85B2] truncate">
+                  neurotic@taildo.com
+                </p>
+              </div>
+            )}
+          </div>
+          {sidebarOpen && (
+            <button
+              onClick={handleLogout}
+              className="p-1.5 text-[#8A85B2] hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+              title="Logout"
+            >
+              <LogOut size={16} />
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* 2. Main Canvas Body */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        {/* Top Navbar matching UStudy LMS */}
+        <header className="bg-white border-b border-gray-100 sticky top-0 z-30 px-5 sm:px-8 py-3 flex items-center justify-between gap-4 shadow-2xs">
+          {/* Left: Pill Search Box */}
+          <div className="flex items-center gap-3 flex-1 max-w-sm">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-2 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer md:hidden"
+              title="Toggle Sidebar"
+            >
+              <Menu size={18} />
+            </button>
+
+            <div className="relative w-full">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder="Search"
+                className="w-full pl-9 pr-9 py-2 bg-[#F8FAFD] hover:bg-white focus:bg-white border border-gray-100 rounded-full text-xs font-medium text-gray-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#6355E6]/20 transition-all"
+              />
+              <SlidersHorizontal size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Real-time sync badge */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200/80 rounded-full text-xs font-bold shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></span>
-              <span>Real-Time Sync Active</span>
-            </div>
+          {/* Right Action Icons: Notification Bell, Message, Settings, Profile */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            {/* Quick Action: Question Builder */}
+            <button
+              onClick={() => setActiveTab('question-builder')}
+              className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                activeTab === 'question-builder'
+                  ? 'bg-[#6355E6] text-white shadow-md shadow-[#6355E6]/30'
+                  : 'bg-[#EEEBFF] hover:bg-[#E2DEFD] text-[#6355E6] border border-purple-200/60'
+              }`}
+              title="Open Question Builder Studio"
+            >
+              <FileText size={15} />
+              <span>Question Builder</span>
+            </button>
 
             {/* Chime sound toggle */}
             <button
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? "Notification sound enabled" : "Notification sound muted"}
-              className={`p-2.5 rounded-2xl border transition-all cursor-pointer ${
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                 soundEnabled 
-                  ? 'bg-blue-50 text-brand-blue border-blue-200 hover:bg-blue-100' 
-                  : 'bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-200'
+                  ? 'bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD]' 
+                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
               }`}
             >
-              {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
             </button>
 
-            {/* Notification Bell with Popover */}
+            {/* Notification Bell with Dropdown (Lavender Circle) */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifMenu(!showNotifMenu)}
-                className={`relative p-2.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-center ${
-                  notifications.filter(n => !n.read).length > 0
-                    ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100 shadow-sm'
-                    : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                }`}
-                title="Appointment Notifications"
+                className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer relative"
+                title="Notifications"
               >
-                {notifications.filter(n => !n.read).length > 0 ? (
-                  <BellRing size={20} className="animate-bounce text-amber-600" />
-                ) : (
-                  <Bell size={20} />
-                )}
-
-                {notifications.filter(n => !n.read).length > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-pulse">
-                    {notifications.filter(n => !n.read).length > 9 ? '9+' : notifications.filter(n => !n.read).length}
-                  </span>
-                )}
+                <Bell size={18} />
+                <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-rose-500 text-white text-[9px] font-black flex items-center justify-center ring-2 ring-white">
+                  {notifications.filter(n => !n.read).length > 0 ? notifications.filter(n => !n.read).length : 2}
+                </span>
               </button>
 
               {/* Popover Dropdown Menu */}
@@ -1038,11 +1359,11 @@ const AdminDashboard = () => {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-gray-100 p-5 z-50 text-left"
+                    className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 z-50 text-left"
                   >
                     <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
                       <div className="flex items-center gap-2">
-                        <Bell size={18} className="text-brand-blue" />
+                        <Bell size={17} className="text-[#3853A4]" />
                         <h3 className="font-extrabold text-sm text-gray-900">
                           Appointment Alerts
                         </h3>
@@ -1056,7 +1377,7 @@ const AdminDashboard = () => {
                         {notifications.filter(n => !n.read).length > 0 && (
                           <button
                             onClick={markAllNotifsAsRead}
-                            className="text-[11px] font-bold text-brand-blue hover:underline flex items-center gap-1"
+                            className="text-[11px] font-bold text-[#3853A4] hover:underline flex items-center gap-1"
                           >
                             <CheckCheck size={12} />
                             Mark all read
@@ -1071,19 +1392,18 @@ const AdminDashboard = () => {
                       </div>
                     </div>
 
-                    {/* Alert List */}
                     <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
                       {notifications.length === 0 ? (
                         <div className="py-8 text-center text-gray-400">
-                          <Radio size={28} className="mx-auto mb-2 text-gray-300 animate-pulse" />
+                          <Radio size={24} className="mx-auto mb-2 text-gray-300 animate-pulse" />
                           <p className="text-xs font-bold">Listening for new bookings...</p>
                           <p className="text-[10px] text-gray-400 mt-1">Alerts pop up instantly when candidates submit the booking form.</p>
                           <button
                             onClick={triggerTestNotification}
-                            className="mt-3 px-3 py-1.5 bg-brand-blue/10 text-brand-blue rounded-xl text-xs font-extrabold hover:bg-brand-blue/20 transition-all inline-flex items-center gap-1.5"
+                            className="mt-3 px-3 py-1.5 bg-[#3853A4]/10 text-[#3853A4] rounded-xl text-xs font-extrabold hover:bg-[#3853A4]/20 transition-all inline-flex items-center gap-1.5"
                           >
                             <Play size={12} />
-                            Test Notification Chime
+                            Test Chime
                           </button>
                         </div>
                       ) : (
@@ -1095,11 +1415,11 @@ const AdminDashboard = () => {
                               setActiveTab('appointments');
                               setShowNotifMenu(false);
                             }}
-                            className={`p-3 rounded-2xl border transition-all cursor-pointer hover:bg-gray-50 flex items-start gap-3 ${
+                            className={`p-3 rounded-xl border transition-all cursor-pointer hover:bg-gray-50 flex items-start gap-3 ${
                               n.read ? 'bg-white border-gray-100 opacity-75' : 'bg-blue-50/60 border-blue-200'
                             }`}
                           >
-                            <div className="w-8 h-8 rounded-xl bg-brand-blue/10 text-brand-blue flex items-center justify-center shrink-0 mt-0.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#3853A4]/10 text-[#3853A4] flex items-center justify-center shrink-0 mt-0.5">
                               <CalendarCheck size={16} />
                             </div>
                             <div className="flex-1 min-w-0">
@@ -1111,7 +1431,7 @@ const AdminDashboard = () => {
                                   {n.timestamp}
                                 </span>
                               </div>
-                              <p className="text-[11px] font-medium text-brand-blue truncate">
+                              <p className="text-[11px] font-medium text-[#3853A4] truncate">
                                 {n.examPreparingFor}
                               </p>
                               {n.whatsapp && (
@@ -1129,9 +1449,9 @@ const AdminDashboard = () => {
                     <div className="pt-3 border-t border-gray-100 mt-3 flex items-center justify-between text-[11px]">
                       <button
                         onClick={triggerTestNotification}
-                        className="text-gray-500 hover:text-brand-blue font-bold flex items-center gap-1"
+                        className="text-gray-500 hover:text-[#3853A4] font-bold flex items-center gap-1"
                       >
-                        <Play size={12} className="text-brand-blue" />
+                        <Play size={12} className="text-[#3853A4]" />
                         Simulate Alert
                       </button>
                       <button
@@ -1139,9 +1459,9 @@ const AdminDashboard = () => {
                           setActiveTab('appointments');
                           setShowNotifMenu(false);
                         }}
-                        className="text-brand-blue font-extrabold hover:underline"
+                        className="text-[#3853A4] font-extrabold hover:underline"
                       >
-                        View Appointments ({appointments.length})
+                        View All ({appointments.length})
                       </button>
                     </div>
                   </motion.div>
@@ -1149,228 +1469,177 @@ const AdminDashboard = () => {
               </AnimatePresence>
             </div>
 
-            <button 
-              onClick={handleLogout}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 text-red-600 rounded-2xl font-bold hover:bg-red-600 hover:text-white transition-all shadow-xs text-sm"
-            >
-              <LogOut size={16} />
-              Logout
-            </button>
-          </div>
-        </div>
-
-        <div className="grid lg:grid-cols-4 gap-8">
-          <div className="space-y-2">
-            {/* Users Management & User Login */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-1.5 shadow-2xs space-y-1">
-              <button 
-                onClick={() => {
-                  setActiveTab('users');
-                }}
-                className={`w-full flex items-center justify-between px-5 py-3.5 rounded-xl font-bold transition-all cursor-pointer ${activeTab === 'users' && userManagementSubTab === 'all-users' ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20' : 'bg-transparent text-gray-600 hover:bg-gray-50'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Users size={18} />
-                  <span>Users Management</span>
-                </div>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${activeTab === 'users' && userManagementSubTab === 'all-users' ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                  {users.length}
-                </span>
-              </button>
-
-              <button 
-                onClick={() => {
-                  setActiveTab('users');
-                  setUserManagementSubTab('user-login');
-                }}
-                className={`w-full flex items-center justify-between px-5 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                  activeTab === 'users' && userManagementSubTab === 'user-login'
-                    ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20'
-                    : 'text-gray-500 hover:text-brand-blue hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <LogIn size={16} className={activeTab === 'users' && userManagementSubTab === 'user-login' ? 'text-white' : 'text-brand-blue'} />
-                  <span className="font-extrabold">User Login</span>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                  activeTab === 'users' && userManagementSubTab === 'user-login'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-blue-50 text-brand-blue border border-blue-200/50'
-                }`}>
-                  {userLogins.length}
-                </span>
-              </button>
-            </div>
-
-            {/* Students Portal Navigation Section */}
-            <div className={`rounded-2xl border transition-all overflow-hidden ${
-              activeTab === 'students-portal'
-                ? 'bg-white border-brand-blue ring-2 ring-brand-blue/20 shadow-md'
-                : 'bg-white border-gray-100 shadow-2xs hover:border-blue-200'
-            }`}>
-              <button 
-                onClick={() => setActiveTab('students-portal')}
-                className={`w-full flex items-center justify-between px-5 py-3.5 font-bold transition-all cursor-pointer ${
-                  activeTab === 'students-portal' 
-                    ? 'bg-brand-blue text-white shadow-sm' 
-                    : 'text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <GraduationCap size={20} className={activeTab === 'students-portal' ? 'text-white' : 'text-brand-blue'} />
-                  <span className="font-extrabold text-sm">Students Portal</span>
-                </div>
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                  activeTab === 'students-portal' 
-                    ? 'bg-white/20 text-white' 
-                    : 'bg-blue-50 text-brand-blue border border-blue-200/60'
-                }`}>
-                  Live Portal
-                </span>
-              </button>
-
-              <div className="px-4 py-2 bg-gray-50/80 border-t border-gray-100 flex items-center justify-between gap-2">
-                <button
-                  onClick={() => navigate('/dashboard')}
-                  className="text-[11px] font-bold text-brand-blue hover:text-blue-800 flex items-center gap-1 cursor-pointer transition-colors"
-                  title="Open live candidate dashboard directly"
-                >
-                  <ExternalLink size={12} />
-                  <span>Launch Portal</span>
-                </button>
-                <button
-                  onClick={() => navigate('/subject-practice')}
-                  className="text-[11px] font-semibold text-gray-500 hover:text-brand-blue cursor-pointer transition-colors"
-                  title="Open candidate subject practice drills"
-                >
-                  MCQ Practice
-                </button>
-              </div>
-            </div>
-
-            <button 
-              onClick={() => setActiveTab('mocktests')}
-              className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'mocktests' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              <ClipboardList size={20} />
-              Mocktest Catalog
-            </button>
-            <button 
-              onClick={() => setIsGeneratorOpen(true)}
-              className="w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-black bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/20 hover:from-amber-600 hover:to-amber-700 transition-all cursor-pointer border border-amber-400/30"
-            >
-              <Sparkles size={20} className="text-amber-200 shrink-0" />
-              Create Exam from Catalogs
-            </button>
-            <button 
-              onClick={() => setActiveTab('sales')}
-              className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'sales' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              <DollarSign size={20} />
-              Sales & Enrollments
-            </button>
-
-            <button 
-              onClick={() => setActiveTab('appointments')}
-              className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl font-bold transition-all cursor-pointer ${activeTab === 'appointments' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              <div className="flex items-center gap-3">
-                <CalendarCheck size={20} />
-                Appointments
-              </div>
-              {appointments.length > 0 && (
-                <span className={`text-xs px-2.5 py-0.5 rounded-full font-black ${activeTab === 'appointments' ? 'bg-white text-brand-blue' : 'bg-brand-blue text-white'}`}>
-                  {appointments.length}
-                </span>
-              )}
-            </button>
-
-            <button 
+            {/* Message Bubble (Lavender Circle) */}
+            <button
               onClick={() => setActiveTab('halloffame')}
-              className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl font-bold transition-all cursor-pointer ${activeTab === 'halloffame' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+              className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer relative"
+              title="Reviews & Chat"
             >
-              <div className="flex items-center gap-3">
-                <MessageSquare size={20} />
-                <span>Testimonials & Reviews</span>
-              </div>
+              <MessageSquare size={18} />
               {testimonialsList.filter(t => t.status === 'pending').length > 0 && (
-                <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-black ${
-                  activeTab === 'halloffame' ? 'bg-amber-400 text-brand-dark' : 'bg-amber-500 text-white'
-                }`}>
-                  {testimonialsList.filter(t => t.status === 'pending').length} Pending
-                </span>
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" />
               )}
             </button>
 
-            <button 
+            {/* Settings Gear (Lavender Circle) */}
+            <button
               onClick={() => setActiveTab('ads')}
-              className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold transition-all ${activeTab === 'ads' ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/20' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+              className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer"
+              title="Settings & Banners"
             >
-              <Megaphone size={20} />
-              Ads & Banners
+              <Settings size={18} />
             </button>
 
-            <button 
-              onClick={() => navigate('/adminlandingpage/subjects')}
-              className="w-full flex items-center gap-3 px-6 py-4 rounded-2xl font-bold bg-blue-50 text-brand-blue hover:bg-blue-100 transition-all border border-blue-100"
+            {/* User Profile Avatar with Gold Ring & Dropdown Chevron */}
+            <div 
+              onClick={() => setActiveTab('dashboard')}
+              className="flex items-center gap-1.5 pl-1.5 cursor-pointer group"
+              title="Profile & Dashboard"
             >
-              <Plus size={20} className="text-brand-blue shrink-0" />
-              Subject Questions Builder
-            </button>
+              <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 p-0.5 overflow-hidden shadow-2xs">
+                <img 
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" 
+                  alt="Admin" 
+                  className="w-full h-full object-cover rounded-full" 
+                />
+              </div>
+              <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-700 transition-colors" />
+            </div>
           </div>
+        </header>
 
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-[40px] border border-gray-100 p-8 shadow-sm">
-              <div className="flex justify-between items-center mb-8">
+        {/* Content Body */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6">
+          {activeTab === 'dashboard' ? (
+            <AdminOverviewDashboard
+              userCount={users.length}
+              userLoginsCount={userLogins.length}
+              coursesCount={courses.length}
+              mocktestsCount={mocktests.length}
+              appointmentsCount={appointments.length}
+              pendingAppointmentsCount={appointments.filter(a => a.status === 'Pending').length}
+              testimonialsCount={testimonialsList.length}
+              salesCount={sales.length}
+              courses={courses}
+              mocktests={mocktests}
+              sales={sales}
+              users={users}
+              userLogins={userLogins}
+              mockAttempts={mockAttempts}
+              appointments={appointments}
+              adminName={user?.displayName || (user?.email ? user.email.split('@')[0] : 'Admin')}
+              onNavigateTab={(tab) => setActiveTab(tab)}
+              onOpenExamGenerator={() => setIsGeneratorOpen(true)}
+              recentActivities={dynamicRecentActivities}
+            />
+          ) : activeTab === 'question-builder' ? (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-5 py-4 rounded-2xl border border-gray-200/80 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#6355E6] flex items-center justify-center font-bold shadow-2xs">
+                    <FileText size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base font-black text-gray-950">Question Builder Studio</h2>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#6355E6]/10 text-[#6355E6] border border-[#6355E6]/20">
+                        Authoring Suite
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium">
+                      Create, edit & manage clinical questions with 4 choices, rationales, and medical diagram uploads.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setActiveTab('qbank-management')}
+                    className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-[#6355E6] text-xs font-bold rounded-xl border border-purple-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Database size={14} />
+                    <span>Question Bank Hierarchy</span>
+                  </button>
+                  <button
+                    onClick={() => navigate('/adminlandingpage/subjects')}
+                    className="px-3.5 py-2 bg-[#6355E6] hover:bg-[#5244d4] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <ExternalLink size={14} />
+                    <span>Open Fullscreen</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-gray-200/80 shadow-2xs overflow-hidden">
+                <AdminSubjectQuestions />
+              </div>
+            </div>
+          ) : activeTab === 'qbank-management' ? (
+            <AdminQuestionBankManager />
+          ) : activeTab === 'students-portal' ? (
+            <StudentsPortalManager />
+          ) : (activeTab === 'user-management' || activeTab === 'users') ? (
+            <AdminUserManagement
+              onOpenEmailSender={(email) => {
+                setDirectEmailTarget(email);
+                setActiveTab('email-sender');
+              }}
+            />
+          ) : activeTab === 'email-sender' ? (
+            <AdminEmailSender initialRecipientEmail={directEmailTarget} />
+          ) : activeTab === 'user-activities' ? (
+            <AdminUserActivities />
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200/80 p-5 sm:p-7 shadow-2xs">
+              <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100">
                 {activeTab === 'users' ? (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4">
                     <div>
                       <div className="flex items-center gap-3">
-                        <h2 className="text-2xl font-bold text-brand-dark">Users Management</h2>
-                        <span className="px-3 py-1 bg-blue-50 text-brand-blue rounded-full text-xs font-black">
+                        <h2 className="text-xl font-bold text-gray-900">Users Management</h2>
+                        <span className="px-2.5 py-0.5 bg-teal-50 text-teal-700 border border-teal-200 rounded-md text-xs font-black">
                           {userManagementSubTab === 'user-login' ? `${userLogins.length} Active Candidates` : `${users.length} Registered Accounts`}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 mt-1 font-medium">
                         {userManagementSubTab === 'user-login' 
                           ? 'Review candidate user registrations, contact details, and target exam preparations.' 
                           : 'Manage candidate user accounts, permissions, and roles.'}
                       </p>
                     </div>
 
-                    <div className="flex items-center bg-gray-100/90 p-1.5 rounded-2xl gap-1 shrink-0">
+                    <div className="flex items-center bg-gray-100/90 p-1 rounded-xl gap-1 shrink-0">
                       <button
                         onClick={() => setUserManagementSubTab('user-login')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                           userManagementSubTab === 'user-login'
-                            ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20 font-extrabold'
+                            ? 'bg-[#151B26] text-white shadow-2xs font-extrabold'
                             : 'text-gray-500 hover:text-gray-900'
                         }`}
                       >
-                        <LogIn size={14} />
+                        <LogIn size={13} />
                         <span>User Login</span>
-                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${userManagementSubTab === 'user-login' ? 'bg-white/20 text-white' : 'bg-blue-100 text-brand-blue'}`}>
+                        <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${userManagementSubTab === 'user-login' ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'}`}>
                           {userLogins.length}
                         </span>
                       </button>
 
                       <button
                         onClick={() => setUserManagementSubTab('all-users')}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                        className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                           userManagementSubTab === 'all-users'
-                            ? 'bg-brand-blue text-white shadow-md shadow-brand-blue/20 font-extrabold'
+                            ? 'bg-[#151B26] text-white shadow-2xs font-extrabold'
                             : 'text-gray-500 hover:text-gray-900'
                         }`}
                       >
-                        <Users size={14} />
+                        <Users size={13} />
                         <span>All Registered Users</span>
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <h2 className="text-2xl font-bold capitalize text-brand-dark">
-                    {activeTab === 'sales' ? 'Recent Sales' : activeTab === 'mocktests' ? 'Mocktest Catalog' : activeTab === 'appointments' ? `Booked Appointments (${appointments.length})` : activeTab === 'halloffame' ? 'Testimonials & Reviews Management' : activeTab === 'students-portal' ? 'Students Portal Management & Live Access' : `${activeTab} List`}
+                  <h2 className="text-xl font-bold capitalize text-gray-900">
+                    {activeTab === 'sales' ? 'Recent Sales' : activeTab === 'mocktests' ? 'Mocktest Catalog' : activeTab === 'appointments' ? `Booked Appointments (${appointments.length})` : activeTab === 'halloffame' ? 'Testimonials & Reviews Management' : `${activeTab} List`}
                   </h2>
                 )}
                 {activeTab === 'courses' && (
@@ -2126,8 +2395,6 @@ const AdminDashboard = () => {
                       )}
                     </div>
                   </div>
-                ) : activeTab === 'students-portal' ? (
-                  <StudentsPortalManager />
                 ) : activeTab === 'appointments' ? (
                   <div className="space-y-6">
                     {/* Live Stream Header Control Bar */}
@@ -2914,8 +3181,8 @@ const AdminDashboard = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+          )}
+        </main>
       </div>
 
       {/* Add Course Modal */}
@@ -3187,7 +3454,7 @@ const AdminDashboard = () => {
 
               {/* Title */}
               <h3 className="text-2xl font-bold text-gray-900 mb-2" id="delete-modal-title">
-                Delete {deleteConfirm.type === 'course' ? 'Course' : deleteConfirm.type === 'mocktest' ? 'Mock Test' : 'Testimonial Review'}?
+                Delete {deleteConfirm.type === 'course' ? 'Course' : deleteConfirm.type === 'mocktest' ? 'Mock Test' : deleteConfirm.type === 'appointment' ? 'Appointment' : deleteConfirm.type === 'ad' ? 'Advertisement' : deleteConfirm.type === 'poster' ? 'Hall of Fame Poster' : 'Testimonial Review'}?
               </h3>
 
               {/* Message */}
@@ -3197,6 +3464,12 @@ const AdminDashboard = () => {
                   ? ' This action is permanent and cannot be undone.'
                   : deleteConfirm.type === 'mocktest'
                   ? ' This will permanently remove the test and ALL its questions.'
+                  : deleteConfirm.type === 'appointment'
+                  ? ' This will remove the booked appointment from your schedule.'
+                  : deleteConfirm.type === 'ad'
+                  ? ' This will remove the promotional banner from the candidate portal.'
+                  : deleteConfirm.type === 'poster'
+                  ? ' This will remove the achiever poster from the Hall of Fame.'
                   : ' This will remove the review from both the Admin Panel and the public website.'}
               </p>
 

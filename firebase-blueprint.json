@@ -170,6 +170,63 @@
         "createdAt": { "type": "string" }
       },
       "required": ["code", "title", "subject", "imageUrl", "correctAnswer"]
+    },
+    "QuestionBank": {
+      "title": "QuestionBank",
+      "description": "Top-level Question Bank catalog item",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "isListed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "isListed"]
+    },
+    "QuestionBankSubject": {
+      "title": "QuestionBankSubject",
+      "description": "Subject organized under a Question Bank",
+      "type": "object",
+      "properties": {
+        "bankId": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "isListed": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["bankId", "name", "isListed"]
+    },
+    "QuestionBankPortion": {
+      "title": "QuestionBankPortion",
+      "description": "Portion/chapter organized under a Question Bank Subject",
+      "type": "object",
+      "properties": {
+        "bankId": { "type": "string" },
+        "subjectId": { "type": "string" },
+        "name": { "type": "string" },
+        "code": { "type": "string" },
+        "description": { "type": "string" },
+        "isListed": { "type": "boolean" },
+        "assignedQuestions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "questionId": { "type": "string" },
+              "builderSubjectId": { "type": "string" },
+              "assignedAt": { "type": "string" }
+            },
+            "required": ["questionId", "builderSubjectId"]
+          }
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["bankId", "subjectId", "name", "isListed", "assignedQuestions"]
     }
   },
   "firestore": {
@@ -208,6 +265,18 @@
     "/imageBank/{imageId}": {
       "schema": "ImageBankItem",
       "description": "Image Bank visual diagnostic spotter questions"
+    },
+    "/questionBanks/{bankId}": {
+      "schema": "QuestionBank",
+      "description": "Top-level Question Bank entities"
+    },
+    "/questionBankSubjects/{subjectId}": {
+      "schema": "QuestionBankSubject",
+      "description": "Subjects organized under question banks"
+    },
+    "/questionBankPortions/{portionId}": {
+      "schema": "QuestionBankPortion",
+      "description": "Portions/chapters organized under question bank subjects with manually assigned question references"
     }
   }
 }

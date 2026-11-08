@@ -1,20 +1,22 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore } from "firebase/firestore";
+
+import rawFirebaseConfig from "../../firebase-applet-config.json";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAk08-COLHtlPWFZv1pn7M34LcAgpVU0Jk",
-  authDomain: "promedo-5ff5b.firebaseapp.com",
-  projectId: "promedo-5ff5b",
-  storageBucket: "promedo-5ff5b.firebasestorage.app",
-  messagingSenderId: "70739474674",
-  appId: "1:70739474674:web:315c0f524192d9e716b86b",
-  measurementId: "G-G7ZFMYLR62"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || rawFirebaseConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || rawFirebaseConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || rawFirebaseConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || rawFirebaseConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || rawFirebaseConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || rawFirebaseConfig.appId,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || rawFirebaseConfig.measurementId
 };
 
-let app;
+let app: any;
 try {
-  app = initializeApp(firebaseConfig);
+  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 } catch (error) {
   console.error("Firebase initialization failed:", error);
   // Create a dummy app object to prevent crashes
@@ -22,7 +24,21 @@ try {
 }
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+
+// Use initializeFirestore with experimentalForceLongPolling and shorter timeout to avoid connection aborts behind proxies
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+    experimentalLongPollingOptions: {
+      timeoutSeconds: 12,
+    },
+  });
+} catch {
+  firestoreInstance = getFirestore(app);
+}
+
+export const db = firestoreInstance;
 
 export enum OperationType {
   CREATE = 'create',
@@ -53,8 +69,21 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  const errName = error instanceof Error ? error.name : '';
+
+  // Suppress harmless transient aborts from Firestore transport cancellation / reconnection
+  if (
+    errName === 'AbortError' ||
+    errMsg.includes('signal is aborted') ||
+    errMsg.includes('AbortError')
+  ) {
+    console.warn(`[Firestore] Transport abort ignored for ${operationType} on ${path}:`, errMsg);
+    return;
+  }
+
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMsg,
     authInfo: {
       userId: auth.currentUser?.uid,
       email: auth.currentUser?.email,
@@ -70,7 +99,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     },
     operationType,
     path
-  }
+  };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }

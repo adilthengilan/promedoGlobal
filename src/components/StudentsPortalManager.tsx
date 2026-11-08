@@ -67,7 +67,7 @@ export default function StudentsPortalManager() {
   } = usePortalSections();
 
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<PortalCategory>('qbank');
-  const [qbankSubFilter, setQbankSubFilter] = useState<'subjects' | 'bookmarked' | 'custom'>('subjects');
+  const [qbankSubFilter, setQbankSubFilter] = useState<'subjects' | 'custom'>('subjects');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'hidden'>('all');
 
@@ -95,6 +95,7 @@ export default function StudentsPortalManager() {
   // Modal states for Section Add / Edit (non-folder sections)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<PortalSection | null>(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<{ type: 'folder' | 'section'; id: string; name: string } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form states for Add / Edit Section
@@ -343,11 +344,7 @@ export default function StudentsPortalManager() {
 
   // Delete a Question Folder
   const handleDeleteFolder = (id: string, name: string) => {
-    if (window.confirm(`Delete question folder "${name}"? Candidates will no longer be able to practice it.`)) {
-      const updated = deleteQuestionFolder(id);
-      setQuestionFolders(updated);
-      showToast(`Folder "${name}" deleted.`);
-    }
+    setDeleteConfirmTarget({ type: 'folder', id, name });
   };
 
   // Toggle Folder Active / Hidden
@@ -480,10 +477,20 @@ export default function StudentsPortalManager() {
   };
 
   const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}" from candidate portal?`)) {
-      deleteSection(id);
-      showToast(`Section "${name}" deleted.`);
+    setDeleteConfirmTarget({ type: 'section', id, name });
+  };
+
+  const confirmExecuteDelete = () => {
+    if (!deleteConfirmTarget) return;
+    if (deleteConfirmTarget.type === 'folder') {
+      const updated = deleteQuestionFolder(deleteConfirmTarget.id);
+      setQuestionFolders(updated);
+      showToast(`Folder "${deleteConfirmTarget.name}" deleted.`);
+    } else {
+      deleteSection(deleteConfirmTarget.id);
+      showToast(`Section "${deleteConfirmTarget.name}" deleted.`);
     }
+    setDeleteConfirmTarget(null);
   };
 
   // Section category counts
@@ -632,22 +639,6 @@ export default function StudentsPortalManager() {
               >
                 <BookOpen size={13} className={qbankSubFilter === 'subjects' ? 'text-white' : 'text-[#3853A4]'} />
                 <span>Subject Folders ({questionFoldersCount})</span>
-              </button>
-
-              {/* Option 2: Bookmarked MCQs (Subject Folders displayed with selection option) */}
-              <button
-                onClick={() => {
-                  setQbankSubFilter('bookmarked');
-                  setSelectedBookmarkFolderId('all');
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
-                  qbankSubFilter === 'bookmarked'
-                    ? 'bg-amber-500 text-white shadow-2xs font-black'
-                    : 'bg-white text-amber-700 hover:text-amber-900 border border-amber-200'
-                }`}
-              >
-                <Bookmark size={13} className={qbankSubFilter === 'bookmarked' ? 'text-white' : 'text-amber-600'} />
-                <span>Bookmarked MCQs ({questionFoldersCount})</span>
               </button>
 
               {/* Option 3: Custom Module */}
@@ -1978,6 +1969,43 @@ export default function StudentsPortalManager() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 text-center animate-in fade-in zoom-in-95">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-200/60">
+              <AlertCircle size={24} />
+            </div>
+            <h3 className="text-base font-black text-slate-900 mb-1.5">
+              Delete {deleteConfirmTarget.type === 'folder' ? 'Question Folder' : 'Candidate Section'}?
+            </h3>
+            <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-slate-800">"{deleteConfirmTarget.name}"</span>? 
+              {deleteConfirmTarget.type === 'folder' 
+                ? ' Candidates will no longer be able to practice it from their portal.' 
+                : ' This section will be removed from the candidate portal.'}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmTarget(null)}
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmExecuteDelete}
+                className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs transition-all shadow-xs shadow-rose-600/20 cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                <span>Delete</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
