@@ -479,7 +479,7 @@ export default function AdminOverviewDashboard({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-[#1A1D2B] tracking-tight">
-            Welcome back, <span className="text-[#6355E6]">{adminName}!</span>
+            Welcome back, <span className="text-[#3853A4]">{adminName}!</span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-500 mt-0.5 font-medium">
             Live overview of registered candidates, test attempts, real earnings, and Firestore metrics.
@@ -489,10 +489,10 @@ export default function AdminOverviewDashboard({
         <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
           <button
             onClick={() => onNavigateTab('question-builder')}
-            className="px-4 py-2 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-[#6355E6] font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-blue-50 hover:bg-blue-100 border border-blue-200 text-[#3853A4] font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
             title="Open Question Builder Studio"
           >
-            <FileText size={14} className="text-[#6355E6]" />
+            <FileText size={14} className="text-[#3853A4]" />
             <span>Question Builder</span>
           </button>
 
@@ -500,13 +500,13 @@ export default function AdminOverviewDashboard({
             onClick={() => navigate('/dashboard')}
             className="px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
           >
-            <ExternalLink size={14} className="text-[#6355E6]" />
+            <ExternalLink size={14} className="text-[#3853A4]" />
             <span>Candidate Portal</span>
           </button>
 
           <button
             onClick={onOpenExamGenerator}
-            className="px-4 py-2 bg-[#6355E6] hover:bg-[#5344D5] text-white font-bold text-xs rounded-xl shadow-md shadow-[#6355E6]/25 transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-[#3853A4] hover:bg-[#2D4284] text-white font-bold text-xs rounded-xl shadow-md shadow-[#3853A4]/25 transition-all flex items-center gap-2 cursor-pointer"
           >
             <Plus size={15} />
             <span>Create Exam</span>
@@ -514,18 +514,18 @@ export default function AdminOverviewDashboard({
         </div>
       </div>
 
-      {/* 2. Top Primary Metric KPI Cards (5 Strategic Cards Powered by Firestore) */}
+      {/* 2. Top Primary Metric KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: Users Count & Growth */}
         <div 
           onClick={() => onNavigateTab('users')}
-          className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(99,85,230,0.08)] transition-all cursor-pointer group flex flex-col justify-between"
+          className="bg-white rounded-2xl p-4 sm:p-5 border border-gray-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_25px_rgba(56,83,164,0.08)] transition-all cursor-pointer group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs text-gray-400 font-semibold truncate">
               Total Users
             </span>
-            <div className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-[#EEF2FF] text-[#3853A4] flex items-center justify-center shrink-0">
               <Users size={19} className="stroke-[2.2]" />
             </div>
           </div>
@@ -843,17 +843,17 @@ export default function AdminOverviewDashboard({
             </div>
 
             {/* Platform Average Box */}
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#100B38] to-[#201755] text-white mb-5 shadow-sm">
-              <span className="text-[10px] font-black uppercase tracking-wider text-purple-300">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-[#1B2234] to-[#2B3F7E] text-white mb-5 shadow-sm">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
                 Platform Candidate Average
               </span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className="text-3xl font-black text-white">
                   {dailySpendingTime.avgMinutes}
                 </span>
-                <span className="text-sm font-bold text-purple-200">Minutes / Day</span>
+                <span className="text-sm font-bold text-blue-200">Minutes / Day</span>
               </div>
-              <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-white/10 text-purple-200">
+              <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-white/10 text-blue-200">
                 <span>≈ {(dailySpendingTime.avgMinutes / 60).toFixed(1)} Hours/Day</span>
                 <span className="text-emerald-400 font-bold">● Active calculation</span>
               </div>
@@ -868,7 +868,7 @@ export default function AdminOverviewDashboard({
               <div>
                 <div className="flex items-center justify-between text-xs font-bold mb-1">
                   <span className="flex items-center gap-2 text-gray-800">
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#6355E6]" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#3853A4]" />
                     Mock Test Simulators
                   </span>
                   <span className="text-gray-900 font-black">
@@ -876,7 +876,7 @@ export default function AdminOverviewDashboard({
                   </span>
                 </div>
                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#6355E6] h-full rounded-full" style={{ width: `${dailySpendingTime.mocktestPct}%` }} />
+                  <div className="bg-[#3853A4] h-full rounded-full" style={{ width: `${dailySpendingTime.mocktestPct}%` }} />
                 </div>
               </div>
 
@@ -914,12 +914,12 @@ export default function AdminOverviewDashboard({
             </div>
 
             {/* Peak Activity Hours Box */}
-            <div className="mt-5 p-3 rounded-xl bg-purple-50/80 border border-purple-100 flex items-center justify-between text-xs">
+            <div className="mt-5 p-3 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2">
-                <Zap size={16} className="text-[#6355E6]" />
-                <span className="font-bold text-purple-950">Peak Preparation Window</span>
+                <Zap size={16} className="text-[#3853A4]" />
+                <span className="font-bold text-blue-950">Peak Preparation Window</span>
               </div>
-              <span className="font-black text-[#6355E6]">GCC Evenings (GMT+4)</span>
+              <span className="font-black text-[#3853A4]">GCC Evenings (GMT+4)</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ArrowLeft, 
@@ -40,11 +40,17 @@ import {
   fetchListedSubjects,
   PracticeSubject
 } from '../lib/subjectPracticeService';
-import { subscribeToUserBookmarks, toggleUserBookmark } from '../lib/userQuestionService';
+import { 
+  subscribeToUserBookmarks, 
+  toggleUserBookmark,
+  subscribeToUserSubjectBookmarks,
+  toggleUserSubjectBookmark
+} from '../lib/userQuestionService';
 
 export default function SubjectPractice() {
   const { subjectId } = useParams<{ subjectId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   // Mode States: 'learn' | 'practice' | 'results' | 'review'
@@ -55,6 +61,7 @@ export default function SubjectPractice() {
   const [originalQuestions, setOriginalQuestions] = useState<SubjectQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
+  const [isSubjectBookmarked, setIsSubjectBookmarked] = useState(false);
 
   // Subject Stats & Past Attempts
   const [pastAttempts, setPastAttempts] = useState<PracticeAttemptRecord[]>([]);
@@ -86,6 +93,38 @@ export default function SubjectPractice() {
 
   // 1. Fetch Subject Info, Questions, and Performance Stats on mount
   useEffect(() => {
+    if (location.state?.isCustomModule && location.state?.customQuestions) {
+      const customQs: SubjectQuestion[] = location.state.customQuestions;
+      const title = location.state.customTitle || 'Custom Practice Module';
+      setSubjectInfo({
+        id: subjectId || 'custom',
+        name: title,
+        description: `Custom practice deck containing ${customQs.length} selected questions.`,
+        questionCount: customQs.length,
+        isListed: true
+      });
+      setOriginalQuestions(customQs);
+      setLoading(false);
+
+      if (location.state.initialMode === 'practice') {
+        const shuffled = prepareShuffledQuestions(customQs);
+        setPracticeDeck(shuffled);
+        setPracticeIdx(0);
+        setSelectedAnswers({});
+        setActiveMode('practice');
+      } else {
+        setActiveMode('learn');
+      }
+
+      if (user?.uid && subjectId) {
+        getUserPracticeAttempts(user.uid, subjectId).then((records) => {
+          setPastAttempts(records);
+          setSubjectStats(calculateSubjectPerformanceStats(records, subjectId));
+        });
+      }
+      return;
+    }
+
     if (!subjectId) return;
 
     setLoading(true);
@@ -121,24 +160,63 @@ export default function SubjectPractice() {
     } else {
       setLoading(false);
     }
-  }, [subjectId, user?.uid]);
+  }, [subjectId, user?.uid, location.state]);
 
-  // 2. Subscribe to Bookmarks
+  // 2. Subscribe to Bookmarks (Questions & Subject)
   useEffect(() => {
-    if (user?.uid) {
-      const unsub = subscribeToUserBookmarks(user.uid, (list) => {
-        setBookmarkedIds(new Set(list.map(b => b.questionId)));
-      });
-      return () => unsub();
+    const unsubQs = subscribeToUserBookmarks(user?.uid || '', (list) => {
+      setBookmarkedIds(new Set(list.map(b => b.questionId)));
+    });
+
+    const unsubSubj = subscribeToUserSubjectBookmarks(user?.uid || '', (subjIds) => {
+      if (subjectId) {
+        setIsSubjectBookmarked(subjIds.includes(subjectId));
+      }
+    });
+
+    return () => {
+      unsubQs();
+      unsubSubj();
+    };
+  }, [user?.uid, subjectId]);
+
+  // Toggle Bookmark for the whole Subject
+  const handleToggleCurrentSubjectBookmark = async () => {
+    if (!subjectId) return;
+    const nextState = !isSubjectBookmarked;
+    setIsSubjectBookmarked(nextState);
+
+    try {
+      await toggleUserSubjectBookmark(user?.uid || '', subjectId, !nextState);
+    } catch (err) {
+      console.warn('Error toggling subject bookmark:', err);
     }
-  }, [user?.uid]);
+  };
+
+  // Target duration calculation from custom module settings
+  const targetDurationSeconds = location.state?.isUnlimitedTime ? 0 : (
+    location.state?.timeDurationSeconds
+      ? location.state.timeDurationSeconds
+      : (location.state?.timeDurationMinutes ? Math.round(location.state.timeDurationMinutes * 60) : 0)
+  );
 
   // 3. Timer effect during Practice Mode
   useEffect(() => {
     if (activeMode === 'practice') {
       setTimerSeconds(0);
       timerIntervalRef.current = setInterval(() => {
-        setTimerSeconds(prev => prev + 1);
+        setTimerSeconds(prev => {
+          const nextSec = prev + 1;
+          if (targetDurationSeconds > 0 && nextSec >= targetDurationSeconds) {
+            // Auto submit when custom time limit is reached
+            clearInterval(timerIntervalRef.current);
+            setTimeout(() => {
+              handleFinalSubmitPractice();
+            }, 100);
+            return targetDurationSeconds;
+          }
+          return nextSec;
+        });
       }, 1000);
     } else {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
@@ -147,7 +225,7 @@ export default function SubjectPractice() {
     return () => {
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
     };
-  }, [activeMode]);
+  }, [activeMode, targetDurationSeconds]);
 
   // Toggle Bookmark for a question
   const handleToggleBookmark = async (questionId: string) => {
@@ -344,6 +422,19 @@ export default function SubjectPractice() {
                 <span className="text-xs text-slate-400 font-bold">
                   {originalQuestions.length} Questions Available
                 </span>
+
+                {/* Bookmark Subject Button */}
+                <button
+                  onClick={handleToggleCurrentSubjectBookmark}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all border flex items-center gap-1.5 cursor-pointer ${
+                    isSubjectBookmarked
+                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                      : 'bg-slate-50 hover:bg-amber-50 text-slate-600 border-slate-200'
+                  }`}
+                >
+                  <Star size={13} className={isSubjectBookmarked ? 'fill-amber-500 text-amber-500' : ''} />
+                  <span>{isSubjectBookmarked ? 'Subject Bookmarked' : 'Bookmark Subject'}</span>
+                </button>
               </div>
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                 {subjectInfo?.name}
@@ -537,9 +628,17 @@ export default function SubjectPractice() {
               </div>
 
               {/* Live Timer */}
-              <div className="flex items-center gap-2 bg-slate-100 px-3.5 py-1.5 rounded-xl border border-slate-200/80 text-xs font-black text-slate-800">
-                <Clock size={15} className="text-blue-600 animate-pulse" />
-                <span>{formatTime(timerSeconds)}</span>
+              <div className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-black transition-colors ${
+                targetDurationSeconds > 0 && (targetDurationSeconds - timerSeconds) <= 30
+                  ? 'bg-red-50 text-red-700 border-red-300 animate-pulse'
+                  : 'bg-slate-100 text-slate-800 border-slate-200/80'
+              }`}>
+                <Clock size={15} className={targetDurationSeconds > 0 && (targetDurationSeconds - timerSeconds) <= 30 ? 'text-red-600' : 'text-blue-600 animate-pulse'} />
+                <span>
+                  {targetDurationSeconds > 0
+                    ? `Time Left: ${formatTime(Math.max(0, targetDurationSeconds - timerSeconds))}`
+                    : formatTime(timerSeconds)}
+                </span>
               </div>
 
               {/* Progress Count */}

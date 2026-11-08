@@ -1022,32 +1022,33 @@ const AdminDashboard = () => {
   ].slice(0, 5);
 
   return (
-    <div className={`min-h-screen flex bg-[#F5F7FB] ${darkMode ? 'dark bg-slate-900 text-slate-100' : ''} text-gray-800 antialiased`}>
-      {/* 1. UStudy Dark Midnight Indigo Left Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} shrink-0 bg-[#100B38] text-slate-300 transition-all duration-200 flex flex-col justify-between border-r border-[#1F1752] sticky top-0 h-screen z-40 select-none`}>
+    <div className={`min-h-screen flex bg-[#F8FAFC] ${darkMode ? 'dark bg-slate-900 text-slate-100' : ''} text-gray-800 antialiased`}>
+      {/* 1. Promedo Global Admin Obsidian Slate Sidebar */}
+      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} shrink-0 bg-[#1B2234] text-slate-300 transition-all duration-200 flex flex-col justify-between border-r border-[#273148] sticky top-0 h-screen z-40 select-none`}>
         {/* Top: Brand Header */}
         <div className="p-4 sm:p-5 flex items-center justify-between">
           <div 
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            {/* UStudy Shield Gradient Badge */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#6355E6] to-[#8B5CF6] text-white font-black flex items-center justify-center text-lg shadow-md shadow-[#6355E6]/30">
+            {/* Promedo Shield Gradient Badge */}
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3853A4] to-[#2B3F7E] text-white font-black flex items-center justify-center text-lg shadow-md shadow-[#3853A4]/30">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
                 <path d="M9 12l2 2 4-4" />
               </svg>
             </div>
             {sidebarOpen && (
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-white text-xl tracking-tight">UStudy</span>
+              <div className="flex flex-col">
+                <span className="font-black text-white text-lg tracking-tight leading-none">PROMEDO</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-blue-300 bg-blue-500/10 px-1.5 py-0.5 rounded border border-[#3853A4]/30 mt-1">GLOBAL ADMIN</span>
               </div>
             )}
           </div>
           {sidebarOpen && (
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="text-[#8A85B2] hover:text-white p-1 rounded-lg cursor-pointer"
+              className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer"
               title="Collapse"
             >
               <ChevronDown size={16} className="rotate-90" />
@@ -1060,8 +1061,8 @@ const AdminDashboard = () => {
           {/* MENU SECTION */}
           <div className="space-y-1">
             {sidebarOpen && (
-              <p className="px-3 text-[11px] font-bold tracking-wider text-[#8A85B2] mb-2">
-                Menu
+              <p className="px-3 text-[11px] font-bold tracking-wider text-slate-400 mb-2">
+                Main Menu
               </p>
             )}
 
@@ -1070,16 +1071,16 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('dashboard')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'dashboard' 
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
             >
               <div className="flex items-center gap-3">
-                <LayoutGrid size={17} className={activeTab === 'dashboard' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <LayoutGrid size={17} className={activeTab === 'dashboard' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>Dashboards</span>}
               </div>
               {sidebarOpen && (
-                <ChevronDown size={14} className="text-[#8A85B2]" />
+                <ChevronDown size={14} className="text-slate-400" />
               )}
             </button>
 
@@ -1088,17 +1089,17 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('question-builder')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'question-builder' 
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
               title="Question Builder - Author questions, 4 options, rationales & diagrams"
             >
               <div className="flex items-center gap-3">
-                <FileText size={17} className={activeTab === 'question-builder' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <FileText size={17} className={activeTab === 'question-builder' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>Question Builder</span>}
               </div>
               {sidebarOpen && (
-                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#6355E6]/30 text-purple-200 border border-[#6355E6]/40">
+                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#3853A4]/30 text-blue-200 border border-[#3853A4]/40">
                   Builder
                 </span>
               )}
@@ -1109,15 +1110,53 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('students-portal')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'students-portal' 
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
               title="Question Bank - Subject folders, custom modules, image bank & simulators"
             >
               <div className="flex items-center gap-3">
-                <Layers size={17} className={activeTab === 'students-portal' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <Layers size={17} className={activeTab === 'students-portal' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>Question Bank</span>}
               </div>
+            </button>
+
+            {/* Mock Test Page */}
+            <button
+              onClick={() => setActiveTab('mocktests')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'mocktests' 
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
+              }`}
+              title="Manage Mock Test Catalog, Simulators & Import Questions"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardList size={17} className={activeTab === 'mocktests' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Mock Test Page</span>}
+              </div>
+              {sidebarOpen && (
+                <span className="text-[10px] text-slate-400 font-semibold">{mocktests.length}</span>
+              )}
+            </button>
+
+            {/* Course */}
+            <button
+              onClick={() => setActiveTab('courses')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'courses' 
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
+              }`}
+              title="Manage Course Packages"
+            >
+              <div className="flex items-center gap-3">
+                <BookOpen size={17} className={activeTab === 'courses' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Course Packages</span>}
+              </div>
+              {sidebarOpen && (
+                <span className="text-[10px] text-slate-400 font-semibold">{courses.length}</span>
+              )}
             </button>
 
             {/* User Management */}
@@ -1125,13 +1164,13 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('user-management')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'user-management' || activeTab === 'users'
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
               title="Manage LMS Candidates, Students, Roles & Permissions"
             >
               <div className="flex items-center gap-3">
-                <Users size={17} className={activeTab === 'user-management' || activeTab === 'users' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <Users size={17} className={activeTab === 'user-management' || activeTab === 'users' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>User Management</span>}
               </div>
             </button>
@@ -1141,13 +1180,13 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('email-sender')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'email-sender' 
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
               title="Compose & Send Broadcast Emails to Learners"
             >
               <div className="flex items-center gap-3">
-                <Mail size={17} className={activeTab === 'email-sender' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <Mail size={17} className={activeTab === 'email-sender' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>Email Sender</span>}
               </div>
             </button>
@@ -1157,35 +1196,72 @@ const AdminDashboard = () => {
               onClick={() => setActiveTab('user-activities')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
                 activeTab === 'user-activities' 
-                  ? 'bg-[#241B5C] text-white shadow-xs' 
-                  : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
               title="Real-Time Student Activity Stream, Quiz & Exam Audit Logs"
             >
               <div className="flex items-center gap-3">
-                <Activity size={17} className={activeTab === 'user-activities' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <Activity size={17} className={activeTab === 'user-activities' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>User Activities</span>}
+              </div>
+            </button>
+
+            {/* Chat / Appointments */}
+            <button
+              onClick={() => setActiveTab('appointments')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'appointments' 
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
+              }`}
+              title="Manage Consultation Requests"
+            >
+              <div className="flex items-center gap-3">
+                <MessageSquare size={17} className={activeTab === 'appointments' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Appointments</span>}
+              </div>
+              {sidebarOpen && appointments.length > 0 && (
+                <span className="w-5 h-5 rounded-full bg-[#3853A4] text-white text-[10px] font-black flex items-center justify-center">
+                  {appointments.length}
+                </span>
+              )}
+            </button>
+
+            {/* Transaction / Sales */}
+            <button
+              onClick={() => setActiveTab('sales')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'sales' 
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
+              }`}
+              title="View Transactions and Enrollments"
+            >
+              <div className="flex items-center gap-3">
+                <DollarSign size={17} className={activeTab === 'sales' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Transaction</span>}
               </div>
             </button>
           </div>
 
-          {/* HELP SECTION */}
+          {/* HELP & MARKETING SECTION */}
           <div className="space-y-1 pt-2">
             {sidebarOpen && (
-              <p className="px-3 text-[11px] font-bold tracking-wider text-[#8A85B2] mb-2">
-                Help
+              <p className="px-3 text-[11px] font-bold tracking-wider text-slate-400 mb-2">
+                Promotions & Reviews
               </p>
             )}
 
             <button
               onClick={() => setActiveTab('ads')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
-                activeTab === 'ads' ? 'bg-[#241B5C] text-white shadow-xs' : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                activeTab === 'ads' ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
-              title="Manage Platform Advertisements and Banners"
+              title="Manage Platform Ads & Promotional Offers"
             >
               <div className="flex items-center gap-3">
-                <Megaphone size={17} className={activeTab === 'ads' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
+                <Megaphone size={17} className={activeTab === 'ads' ? 'text-white' : 'text-slate-400'} />
                 {sidebarOpen && <span>Ads List</span>}
               </div>
             </button>
@@ -1193,80 +1269,80 @@ const AdminDashboard = () => {
             <button
               onClick={() => setActiveTab('halloffame')}
               className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
-                activeTab === 'halloffame' ? 'bg-[#241B5C] text-white shadow-xs' : 'text-[#9A95C7] hover:text-white hover:bg-[#1C144F]'
+                activeTab === 'halloffame' ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
               }`}
-              title="Manage Candidate Reviews & Hall of Fame Testimonials"
+              title="Manage Candidate Reviews & Testimonials"
             >
               <div className="flex items-center gap-3">
-                <Star size={17} className={activeTab === 'halloffame' ? 'text-[#8B5CF6]' : 'text-[#8A85B2]'} />
-                {sidebarOpen && <span>Testimonial</span>}
+                <Star size={17} className={activeTab === 'halloffame' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Testimonials</span>}
               </div>
             </button>
           </div>
 
-          {/* Bottom Promo Card matching screenshot */}
+          {/* Bottom Promo Card */}
           {sidebarOpen && (
-            <div className="bg-[#201755] border border-white/10 rounded-2xl p-4 text-white relative shadow-lg">
+            <div className="bg-[#222C42] border border-white/10 rounded-2xl p-4 text-white relative shadow-lg">
               <button 
-                className="absolute top-2.5 right-2.5 text-gray-400 hover:text-white cursor-pointer"
+                className="absolute top-2.5 right-2.5 text-slate-400 hover:text-white cursor-pointer"
                 title="Dismiss"
               >
                 <X size={14} />
               </button>
-              <p className="text-xs font-black text-white mb-0.5">New Course</p>
-              <p className="text-[10px] text-gray-300 leading-tight mb-3">
-                Check out the new dashboard view. Pages now load faster.
+              <p className="text-xs font-black text-white mb-0.5">PROMEDO Updates</p>
+              <p className="text-[10px] text-slate-300 leading-tight mb-3">
+                New Question Bank & Custom Modules active for GCC licensing candidates.
               </p>
 
               {/* Video Thumbnail with Play Button */}
-              <div className="relative rounded-xl overflow-hidden mb-3 aspect-video bg-indigo-900 border border-white/15">
+              <div className="relative rounded-xl overflow-hidden mb-3 aspect-video bg-blue-950 border border-white/15">
                 <img 
                   src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=300&auto=format&fit=crop&q=80" 
-                  alt="Course Preview" 
+                  alt="Promedo Preview" 
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-white/90 text-[#6355E6] flex items-center justify-center shadow-md">
+                  <div className="w-8 h-8 rounded-full bg-white/90 text-[#3853A4] flex items-center justify-center shadow-md">
                     <Play size={14} className="fill-current ml-0.5" />
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center justify-between gap-2">
-                <button className="text-[11px] font-bold text-gray-400 hover:text-white cursor-pointer">
+                <button className="text-[11px] font-bold text-slate-400 hover:text-white cursor-pointer">
                   Dismiss
                 </button>
                 <button 
-                  onClick={() => navigate('/adminlandingpage/subjects')}
-                  className="px-3 py-1 bg-[#6355E6] hover:bg-[#5344D5] text-white text-[10px] font-bold rounded-lg shadow-sm cursor-pointer"
+                  onClick={() => setActiveTab('students-portal')}
+                  className="px-3 py-1 bg-[#3853A4] hover:bg-[#2D4284] text-white text-[10px] font-bold rounded-lg shadow-sm cursor-pointer"
                 >
-                  What's new?
+                  Explore Bank
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Sidebar Footer User Card matching screenshot */}
-        <div className="p-3.5 border-t border-[#1F1752] bg-[#0C082D] flex items-center justify-between">
+        {/* Sidebar Footer User Card */}
+        <div className="p-3.5 border-t border-[#273148] bg-[#141A28] flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 p-0.5 overflow-hidden shrink-0">
+              <div className="w-10 h-10 rounded-full ring-2 ring-blue-400/80 p-0.5 overflow-hidden shrink-0">
                 <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" 
-                  alt="Profile" 
+                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80" 
+                  alt="Promedo Administrator" 
                   className="w-full h-full object-cover rounded-full"
                 />
               </div>
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#0C082D]" />
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#141A28]" />
             </div>
             {sidebarOpen && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-black text-white truncate">
-                  Neurotic Spy
+                  {user?.displayName || 'Promedo Administrator'}
                 </p>
-                <p className="text-[10px] text-[#8A85B2] truncate">
-                  neurotic@taildo.com
+                <p className="text-[10px] text-slate-400 truncate">
+                  {user?.email || 'admin@promedoglobal.com'}
                 </p>
               </div>
             )}
@@ -1274,7 +1350,7 @@ const AdminDashboard = () => {
           {sidebarOpen && (
             <button
               onClick={handleLogout}
-              className="p-1.5 text-[#8A85B2] hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
               title="Logout"
             >
               <LogOut size={16} />
@@ -1285,9 +1361,9 @@ const AdminDashboard = () => {
 
       {/* 2. Main Canvas Body */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Top Navbar matching UStudy LMS */}
-        <header className="bg-white border-b border-gray-100 sticky top-0 z-30 px-5 sm:px-8 py-3 flex items-center justify-between gap-4 shadow-2xs">
-          {/* Left: Pill Search Box */}
+        {/* Top Navbar matching Promedo Global LMS */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-30 px-5 sm:px-8 py-3 flex items-center justify-between gap-4 shadow-2xs">
+          {/* Left: Search Box */}
           <div className="flex items-center gap-3 flex-1 max-w-sm">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -1303,22 +1379,22 @@ const AdminDashboard = () => {
                 type="text"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder="Search"
-                className="w-full pl-9 pr-9 py-2 bg-[#F8FAFD] hover:bg-white focus:bg-white border border-gray-100 rounded-full text-xs font-medium text-gray-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#6355E6]/20 transition-all"
+                placeholder="Search..."
+                className="w-full pl-9 pr-9 py-2 bg-[#F8FAFD] hover:bg-white focus:bg-white border border-gray-200 rounded-full text-xs font-medium text-gray-700 shadow-2xs focus:outline-none focus:ring-2 focus:ring-[#3853A4]/20 transition-all"
               />
               <SlidersHorizontal size={13} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
 
-          {/* Right Action Icons: Notification Bell, Message, Settings, Profile */}
+          {/* Right Action Icons */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Quick Action: Question Builder */}
             <button
               onClick={() => setActiveTab('question-builder')}
               className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'question-builder'
-                  ? 'bg-[#6355E6] text-white shadow-md shadow-[#6355E6]/30'
-                  : 'bg-[#EEEBFF] hover:bg-[#E2DEFD] text-[#6355E6] border border-purple-200/60'
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black'
+                  : 'bg-[#EEF2FF] hover:bg-[#E0E7FF] text-[#3853A4] border border-blue-200/60'
               }`}
               title="Open Question Builder Studio"
             >
@@ -1332,18 +1408,18 @@ const AdminDashboard = () => {
               title={soundEnabled ? "Notification sound enabled" : "Notification sound muted"}
               className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                 soundEnabled 
-                  ? 'bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD]' 
+                  ? 'bg-[#EEF2FF] text-[#3853A4] hover:bg-[#E0E7FF]' 
                   : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
               }`}
             >
               {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
             </button>
 
-            {/* Notification Bell with Dropdown (Lavender Circle) */}
+            {/* Notification Bell with Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowNotifMenu(!showNotifMenu)}
-                className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer relative"
+                className="w-10 h-10 rounded-full bg-[#EEF2FF] text-[#3853A4] hover:bg-[#E0E7FF] flex items-center justify-center transition-all cursor-pointer relative"
                 title="Notifications"
               >
                 <Bell size={18} />
@@ -1469,10 +1545,10 @@ const AdminDashboard = () => {
               </AnimatePresence>
             </div>
 
-            {/* Message Bubble (Lavender Circle) */}
+            {/* Message Bubble */}
             <button
               onClick={() => setActiveTab('halloffame')}
-              className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer relative"
+              className="w-10 h-10 rounded-full bg-[#EEF2FF] text-[#3853A4] hover:bg-[#E0E7FF] flex items-center justify-center transition-all cursor-pointer relative"
               title="Reviews & Chat"
             >
               <MessageSquare size={18} />
@@ -1481,16 +1557,16 @@ const AdminDashboard = () => {
               )}
             </button>
 
-            {/* Settings Gear (Lavender Circle) */}
+            {/* Settings Gear */}
             <button
               onClick={() => setActiveTab('ads')}
-              className="w-10 h-10 rounded-full bg-[#EEEBFF] text-[#6355E6] hover:bg-[#E2DEFD] flex items-center justify-center transition-all cursor-pointer"
+              className="w-10 h-10 rounded-full bg-[#EEF2FF] text-[#3853A4] hover:bg-[#E0E7FF] flex items-center justify-center transition-all cursor-pointer"
               title="Settings & Banners"
             >
               <Settings size={18} />
             </button>
 
-            {/* User Profile Avatar with Gold Ring & Dropdown Chevron */}
+            {/* User Profile Avatar */}
             <div 
               onClick={() => setActiveTab('dashboard')}
               className="flex items-center gap-1.5 pl-1.5 cursor-pointer group"
@@ -1498,7 +1574,7 @@ const AdminDashboard = () => {
             >
               <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 p-0.5 overflow-hidden shadow-2xs">
                 <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80" 
+                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80" 
                   alt="Admin" 
                   className="w-full h-full object-cover rounded-full" 
                 />
@@ -1536,13 +1612,13 @@ const AdminDashboard = () => {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white px-5 py-4 rounded-2xl border border-gray-200/80 shadow-2xs">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-100 text-[#6355E6] flex items-center justify-center font-bold shadow-2xs">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#3853A4] flex items-center justify-center font-bold shadow-2xs">
                     <FileText size={20} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base font-black text-gray-950">Question Builder Studio</h2>
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#6355E6]/10 text-[#6355E6] border border-[#6355E6]/20">
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-[#3853A4]/10 text-[#3853A4] border border-[#3853A4]/20">
                         Authoring Suite
                       </span>
                     </div>
@@ -1554,15 +1630,15 @@ const AdminDashboard = () => {
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setActiveTab('qbank-management')}
-                    className="px-3.5 py-2 bg-purple-50 hover:bg-purple-100 text-[#6355E6] text-xs font-bold rounded-xl border border-purple-200 transition-all flex items-center gap-1.5 cursor-pointer"
+                    onClick={() => setActiveTab('students-portal')}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-[#3853A4] text-xs font-bold rounded-xl border border-blue-200 transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <Database size={14} />
                     <span>Question Bank Hierarchy</span>
                   </button>
                   <button
                     onClick={() => navigate('/adminlandingpage/subjects')}
-                    className="px-3.5 py-2 bg-[#6355E6] hover:bg-[#5244d4] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-2 bg-[#3853A4] hover:bg-[#2D4284] text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                   >
                     <ExternalLink size={14} />
                     <span>Open Fullscreen</span>

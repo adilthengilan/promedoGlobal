@@ -68,9 +68,9 @@ function saveLocalBookmarks(userId: string, bookmarks: QuestionReference[]): voi
 }
 
 function getLocalSubjectBookmarks(userId: string): string[] {
-  if (!userId) return [];
+  const key = `${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId || 'guest'}`;
   try {
-    const raw = localStorage.getItem(`${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId}`);
+    const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -78,9 +78,9 @@ function getLocalSubjectBookmarks(userId: string): string[] {
 }
 
 function saveLocalSubjectBookmarks(userId: string, ids: string[]): void {
-  if (!userId) return;
+  const key = `${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId || 'guest'}`;
   try {
-    localStorage.setItem(`${SUBJECT_BOOKMARKS_STORAGE_PREFIX}${userId}`, JSON.stringify(ids));
+    localStorage.setItem(key, JSON.stringify(ids));
   } catch {}
 }
 
@@ -213,7 +213,7 @@ export function subscribeToUserSubjectBookmarks(
   onError?: (err: Error) => void
 ): Unsubscribe {
   if (!userId) {
-    onData([]);
+    onData(getLocalSubjectBookmarks('guest'));
     return () => {};
   }
 
@@ -425,9 +425,31 @@ export async function resolveQuestionReferences(
 ): Promise<ResolvedQuestion[]> {
   if (!refs || refs.length === 0) return [];
 
-  // Group by subjectId to fetch each subject's questions once
+  // 1. Build map from local Question Folders (Admin App Pages source)
+  const { getQuestionFolders } = await import('./questionFolders');
+  const folders = getQuestionFolders();
+  const folderQuestionMap = new Map<string, ResolvedQuestion>();
+
+  folders.forEach((f) => {
+    (f.selectedQuestions || []).forEach((q) => {
+      folderQuestionMap.set(q.id, {
+        id: q.id,
+        subjectId: f.id,
+        subjectName: f.name,
+        text: q.text,
+        options: Array.isArray(q.options) ? q.options : [],
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        explanation: q.explanation || '',
+        imageUrl: q.imageUrl,
+        createdAt: q.createdAt
+      });
+    });
+  });
+
+  // Group remaining references by subjectId for Firestore lookup if missing from folders
+  const missingRefs = refs.filter((r) => !folderQuestionMap.has(r.questionId));
   const bySubject = new Map<string, QuestionReference[]>();
-  refs.forEach((r) => {
+  missingRefs.forEach((r) => {
     const list = bySubject.get(r.subjectId) || [];
     list.push(r);
     bySubject.set(r.subjectId, list);
@@ -458,7 +480,6 @@ export async function resolveQuestionReferences(
           });
         });
       } catch (err) {
-        // Fallback to localStorage if Firestore read fails
         try {
           const raw = localStorage.getItem(`local_questions_${subjectId}`);
           if (raw) {
@@ -493,7 +514,7 @@ export async function resolveQuestionReferences(
 
   // Preserve original reference order
   return refs
-    .map((r) => resolvedMap.get(r.questionId))
+    .map((r) => folderQuestionMap.get(r.questionId) || resolvedMap.get(r.questionId))
     .filter((q): q is ResolvedQuestion => Boolean(q));
 }
 export async function fetchQuestionsBySubject(subjectId: string): Promise<ResolvedQuestion[]> {
