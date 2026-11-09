@@ -217,83 +217,7 @@ export default function StudentsPortalManager() {
     }
   };
 
-  // Helper to load sample clinical questions if database is currently empty
-  const handleSeedSampleQuestions = () => {
-    const sampleQuestions: QuestionItem[] = [
-      {
-        id: `sample-q-1-${Date.now()}`,
-        subjectId: 'cardiology',
-        subjectName: 'Cardiology',
-        text: 'A 62-year-old male presents with crushing retrosternal chest pain radiating to his left jaw. ECG reveals ST-segment elevation in leads II, III, and aVF. Which coronary artery is most likely occluded?',
-        options: [
-          'Left Anterior Descending (LAD)',
-          'Right Coronary Artery (RCA)',
-          'Left Circumflex (LCx)',
-          'Left Main Coronary Artery'
-        ],
-        correctAnswer: 1,
-        explanation: 'ST elevation in leads II, III, and aVF denotes an acute inferior wall myocardial infarction, supplied by the Right Coronary Artery (RCA) in 85-90% of individuals.'
-      },
-      {
-        id: `sample-q-2-${Date.now()}`,
-        subjectId: 'cardiology',
-        subjectName: 'Cardiology',
-        text: 'Which drug is the initial medical therapy of choice for hemodynamically stable regular narrow-complex supraventricular tachycardia (SVT) unresponsive to vagal maneuvers?',
-        options: ['Amiodarone 150mg IV', 'Adenosine 6mg rapid IV push', 'Digoxin 0.5mg IV', 'Lidocaine 100mg IV'],
-        correctAnswer: 1,
-        explanation: 'Adenosine given as a 6mg rapid IV push with saline flush causes transient AV node blockade and successfully terminates AVNRT/AVRT in >90% of cases.'
-      },
-      {
-        id: `sample-q-3-${Date.now()}`,
-        subjectId: 'surgery',
-        subjectName: 'General Surgery',
-        text: 'A 24-year-old male presents with periumbilical pain that migrated to the right lower quadrant, accompanied by low-grade fever and anorexia. Physical exam demonstrates positive McBurney point tenderness and positive Rovsing sign. What is the most appropriate management?',
-        options: ['Diagnostic colonoscopy', 'Immediate appendectomy / laparoscopic exploration', 'High-dose oral steroid therapy', 'Discharge with antispasmodics'],
-        correctAnswer: 1,
-        explanation: 'The classic migration of pain to McBurney point with Rovsing sign is pathognomonic for acute appendicitis. Definitive management is urgent appendectomy to prevent perforation.'
-      },
-      {
-        id: `sample-q-4-${Date.now()}`,
-        subjectId: 'pediatrics',
-        subjectName: 'Paediatrics',
-        text: 'A 4-year-old child presents with sudden onset high fever, severe inspiratory stridor, drooling, and adopts a tripod sitting position with neck extension. What is the most crucial next step?',
-        options: [
-          'Immediate oral cavity examination with a tongue depressor in the triage room',
-          'Urgent ENT and anesthesia consultation for airway stabilization in an operating theatre',
-          'Stat neck CT scan with oral contrast',
-          'Send home on nebulized saline'
-        ],
-        correctAnswer: 1,
-        explanation: 'Suspected acute epiglottitis is a critical airway emergency. Direct visualization with a tongue depressor outside a controlled operating theatre can trigger fatal laryngospasm.'
-      },
-      {
-        id: `sample-q-5-${Date.now()}`,
-        subjectId: 'pharmacology',
-        subjectName: 'Pharmacology',
-        text: 'A patient taking Warfarin presents with gross hematuria and an INR of 9.5 without major bleeding. In addition to withholding Warfarin, which antidote is indicated?',
-        options: ['Protamine sulfate IV', 'Oral Vitamin K (Phytomenadione)', 'Desmopressin (DDAVP)', 'Tranexamic Acid bolus'],
-        correctAnswer: 1,
-        explanation: 'For asymptomatic high INR (>9.0) without life-threatening bleeding, guidelines recommend withholding Warfarin and administering low-dose oral Vitamin K (2.5 - 5mg).'
-      }
-    ];
 
-    setAvailableQuestions(prev => [...prev, ...sampleQuestions]);
-    const subjectsMap = new Map<string, SubjectItem>();
-    availableSubjects.forEach(s => subjectsMap.set(s.id, s));
-    sampleQuestions.forEach(q => {
-      if (!subjectsMap.has(q.subjectId)) {
-        subjectsMap.set(q.subjectId, {
-          id: q.subjectId,
-          name: q.subjectName,
-          details: `${q.subjectName} high-yield question repository`,
-          createdAt: new Date().toISOString()
-        });
-      }
-    });
-    setAvailableSubjects(Array.from(subjectsMap.values()));
-    setFolderSelectedQuestionIds(sampleQuestions.map(q => q.id));
-    showToast('Loaded clinical sample questions from Subject Builder!');
-  };
 
   // Save or Update Folder containing selected questions
   const handleSaveQuestionFolder = (e: React.FormEvent) => {
@@ -1655,18 +1579,10 @@ export default function StudentsPortalManager() {
                     <div className="space-y-1">
                       <p className="text-xs font-black text-[#0B1C30]">No questions found in the Subject-Wise Question Builder</p>
                       <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                        You can load high-yield clinical sample questions immediately or jump to the builder to add new questions.
+                        Create questions in the Question Builder first to organize them into folders for student practice.
                       </p>
                     </div>
                     <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={handleSeedSampleQuestions}
-                        className="px-3.5 py-2 bg-[#3853A4] hover:bg-[#2E4387] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs inline-flex items-center gap-1.5"
-                      >
-                        <Plus size={13} />
-                        <span>Load Sample Clinical MCQs</span>
-                      </button>
                       <button
                         type="button"
                         onClick={() => {

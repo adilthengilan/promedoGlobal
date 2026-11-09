@@ -50,13 +50,11 @@ const Checkout: React.FC = () => {
         if (docSnap.exists()) {
           setCourse({ id: docSnap.id, ...docSnap.data() });
         } else {
-          // Fallback to local catalog
-          const localCourse = DEFAULT_LMS_CATALOG.find(c => c.id === courseId) || DEFAULT_LMS_CATALOG[0];
-          setCourse(localCourse);
+          setCourse(null);
         }
       } catch (err) {
         console.error("Error fetching course for checkout:", err);
-        setCourse(DEFAULT_LMS_CATALOG[0]);
+        setCourse(null);
       } finally {
         setLoading(false);
       }

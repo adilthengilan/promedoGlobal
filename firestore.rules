@@ -53,6 +53,14 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    function isOwnerUpdatingProfile(userId) {
+      return isOwner(userId) && isValidUser(request.resource.data) && 
+        request.resource.data.role == resource.data.role &&
+        (!('paymentStatus' in request.resource.data) || !('paymentStatus' in resource.data) || request.resource.data.paymentStatus == resource.data.paymentStatus) &&
+        (!('accessStatus' in request.resource.data) || !('accessStatus' in resource.data) || request.resource.data.accessStatus == resource.data.accessStatus) &&
+        (!('paymentActivatedAt' in request.resource.data) || !('paymentActivatedAt' in resource.data) || request.resource.data.paymentActivatedAt == resource.data.paymentActivatedAt);
+    }
+
     // Courses: Publicly readable, admin writable
     match /courses/{courseId} {
       allow read: if true;
@@ -72,7 +80,7 @@ service cloud.firestore {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && 
                     (request.resource.data.role in ['user', 'student'] || isAdmin());
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow update: if isOwnerUpdatingProfile(userId) || isAdmin();
       allow delete: if isAdmin();
 
       match /bookmarks/{questionId} {

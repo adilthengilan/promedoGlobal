@@ -28,6 +28,7 @@ import CourseDetail from './pages/CourseDetail';
 import CoursePlayer from './pages/CoursePlayer';
 import Checkout from './pages/Checkout';
 import Bookmarks from './pages/Bookmarks';
+import PaidAccessGuard from './components/PaidAccessGuard';
 
 import WhatsAppFloatingButton from './components/WhatsAppFloatingButton';
 
@@ -53,20 +54,29 @@ function AppContent() {
           <Route path="/adminlandingpage/mocktest/edit/:id" element={<AdminMocktestEditor />} />
           <Route path="/admin/*" element={<Navigate to="/adminlandingpage" replace />} />
           <Route path="/admin" element={<Navigate to="/adminlandingpage" replace />} />
-          <Route path="/courses" element={<Courses />} />
-          <Route path="/mocktests" element={<MockTests />} />
-          <Route path="/mock-tests" element={<MockTests />} />
-          <Route path="/mock-tests-list" element={<MockTests />} />
-          <Route path="/course/:id" element={<CourseDetail />} />
+          
+          {/* Module 1: Courses (Requires PAID status) */}
+          <Route path="/courses" element={<PaidAccessGuard moduleName="Courses"><Courses /></PaidAccessGuard>} />
+          <Route path="/course/:id" element={<PaidAccessGuard moduleName="Courses"><CourseDetail /></PaidAccessGuard>} />
+          <Route path="/player/:id" element={<PaidAccessGuard moduleName="Courses"><CoursePlayer /></PaidAccessGuard>} />
+
+          {/* Module 2: Mock Tests (Requires PAID status) */}
+          <Route path="/mocktests" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
+          <Route path="/mock-tests" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
+          <Route path="/mock-tests-list" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
+          <Route path="/mock-test/:id?" element={<PaidAccessGuard moduleName="Mock Tests"><MockTest /></PaidAccessGuard>} />
+          <Route path="/mock-test-intro" element={<PaidAccessGuard moduleName="Mock Tests"><MockTestIntro /></PaidAccessGuard>} />
+          <Route path="/exam-demo" element={<PaidAccessGuard moduleName="Mock Tests"><ExamDemo /></PaidAccessGuard>} />
+
+          {/* Module 3: Practice (Requires PAID status) */}
+          <Route path="/student/subject/:subjectId" element={<PaidAccessGuard moduleName="Practice"><SubjectPractice /></PaidAccessGuard>} />
+          <Route path="/subject-practice" element={<PaidAccessGuard moduleName="Practice"><SubjectPractice /></PaidAccessGuard>} />
+
+          {/* Module 4: Question Bank & Bookmarks (Requires PAID status) */}
+          <Route path="/student/bookmarks" element={<PaidAccessGuard moduleName="Question Bank"><Bookmarks /></PaidAccessGuard>} />
+
           <Route path="/success" element={<Success />} />
-          <Route path="/player/:id" element={<CoursePlayer />} />
-          <Route path="/mock-test/:id?" element={<MockTest />} />
-          <Route path="/student/subject/:subjectId" element={<SubjectPractice />} />
-          <Route path="/subject-practice" element={<SubjectPractice />} />
-          <Route path="/student/bookmarks" element={<Bookmarks />} />
           <Route path="/updates" element={<Updates />} />
-          <Route path="/exam-demo" element={<ExamDemo />} />
-          <Route path="/mock-test-intro" element={<MockTestIntro />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<ContactSupport />} />
           <Route path="/support" element={<ContactSupport />} />

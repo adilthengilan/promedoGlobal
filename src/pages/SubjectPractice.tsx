@@ -27,6 +27,7 @@ import {
   Zap
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import QuestionImage from '../components/QuestionImage';
 import { 
   fetchQuestionsForSubject, 
   prepareShuffledQuestions, 
@@ -542,8 +543,8 @@ export default function SubjectPractice() {
 
                       {/* Question Image if present */}
                       {q.imageUrl && (
-                        <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 p-2 max-h-80 flex items-center justify-center">
-                          <img src={q.imageUrl} alt="Clinical media" className="max-h-80 w-auto object-contain rounded-xl" />
+                        <div className="flex justify-center">
+                          <QuestionImage imageUrl={q.imageUrl} altText={q.text} className="max-h-80 w-auto rounded-2xl" />
                         </div>
                       )}
 
@@ -670,8 +671,8 @@ export default function SubjectPractice() {
 
                   {/* Question Image if present */}
                   {q.imageUrl && (
-                    <div className="rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 p-2 max-h-80 flex items-center justify-center">
-                      <img src={q.imageUrl} alt="Clinical media" className="max-h-80 w-auto object-contain rounded-xl" />
+                    <div className="flex justify-center">
+                      <QuestionImage imageUrl={q.imageUrl} altText={q.text} className="max-h-80 w-auto rounded-2xl" />
                     </div>
                   )}
 
@@ -881,6 +882,13 @@ export default function SubjectPractice() {
                   <p className="text-sm sm:text-base font-extrabold text-slate-900 leading-relaxed">
                     {rev.text}
                   </p>
+
+                  {/* Question Image in Review */}
+                  {rev.imageUrl && (
+                    <div className="pt-2 max-w-md">
+                      <QuestionImage imageUrl={rev.imageUrl} altText={rev.text} className="max-h-60 rounded-2xl" />
+                    </div>
+                  )}
 
                   {/* Options List with selected vs correct */}
                   <div className="grid gap-2 pt-2">

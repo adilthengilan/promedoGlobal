@@ -33,129 +33,8 @@ import { COUNTRY_CODES, parsePhoneWithCountryCode } from '../data/countryCodes';
 import { CountryCodeSelect } from '../components/CountryCodeSelect';
 import { recordCandidateLogin, EXAM_OPTIONS } from '../lib/userLogins';
 
-const DEFAULT_MOCKTESTS = [
-  {
-    id: 'dha-gp-sim-2026',
-    title: 'DHA General Practitioner Full Exam Simulator (150 Qs)',
-    authority: 'DHA',
-    category: 'Dubai Health Authority',
-    questions: 150,
-    duration: 180, // minutes
-    timeLimit: 180,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 4.9,
-    attemptsCount: 1420,
-    status: 'published',
-    tag: 'Free Mock Test',
-    description: 'Authentic 150-question DHA GP computer-based test simulator with real timer, instant score analytics, and detailed clinical case rationales.'
-  },
-  {
-    id: 'haad-doh-[#1]-mock',
-    title: 'HAAD / DOH Abu Dhabi Physician Practice Simulator',
-    authority: 'HAAD',
-    category: 'Department of Health Abu Dhabi',
-    questions: 150,
-    duration: 180,
-    timeLimit: 180,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 4.8,
-    attemptsCount: 980,
-    status: 'published',
-    tag: 'Free Mock Test',
-    description: 'Covers HAAD GP recall cases, internal medicine, surgery, pediatrics, and UAE health authority clinical protocols with free direct access.'
-  },
-  {
-    id: 'smle-saudi-grand-sim',
-    title: 'Saudi Medical Licensing Exam (SMLE) Grand Simulator',
-    authority: 'SMLE',
-    category: 'Saudi Commission (SCFHS)',
-    questions: 300,
-    duration: 360,
-    timeLimit: 360,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 5.0,
-    attemptsCount: 2150,
-    status: 'published',
-    tag: 'Free Grand Mock',
-    description: 'Full 300-question two-part SMLE Prometric examination simulation with timed blocks and percentile scoring with instant access.'
-  },
-  {
-    id: 'omsb-oman-gp-sim',
-    title: 'OMSB Oman Medical Specialty Board Exam Simulator',
-    authority: 'OMSB',
-    category: 'Oman Medical Specialty Board',
-    questions: 100,
-    duration: 120,
-    timeLimit: 120,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 4.9,
-    attemptsCount: 650,
-    status: 'published',
-    tag: 'Free Mock Test',
-    description: 'Oman OMSB GP computer-based test practice with high-yield clinical decision questions and comprehensive performance report.'
-  },
-  {
-    id: 'qchp-qatar-mock-sim',
-    title: 'QCHP Qatar Prometric GP Practice Simulator',
-    authority: 'QCHP',
-    category: 'Qatar Council for Healthcare Practitioners',
-    questions: 150,
-    duration: 180,
-    timeLimit: 180,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 5.0,
-    attemptsCount: 0,
-    status: 'coming_soon',
-    tag: 'Coming Soon',
-    description: 'Qatar QCHP GP Prometric simulator undergoing final medical faculty question verification.'
-  },
-  {
-    id: 'nhra-bahrain-mock-sim',
-    title: 'NHRA Bahrain Physician Licensure Simulator',
-    authority: 'NHRA',
-    category: 'National Health Regulatory Authority',
-    questions: 100,
-    duration: 120,
-    timeLimit: 120,
-    passScore: 60,
-    passingScore: 60,
-    price: 0,
-    isPaid: false,
-    rating: 5.0,
-    attemptsCount: 0,
-    status: 'unavailable',
-    tag: 'Under Review',
-    description: 'Bahrain NHRA licensing exam recall simulator currently being updated for 2026 guidelines.'
-  }
-];
-
-const DEFAULT_ADMIN_ADS = [
-  {
-    id: 'ad-mock-1',
-    title: '⚡ 100% Free Prometric Exam Simulators',
-    subtitle: 'Practice with authentic DHA, HAAD, and SMLE Prometric test question banks. Instant direct access with zero fees or payment gateways required!',
-    code: 'FREEMOCK',
-    badge: 'Free Direct Access',
-    ctaText: 'Start Free Mock Test Now',
-    link: '/mock-test/dha-gp-sim-2026',
-    imageUrl: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=1200'
-  }
-];
+const DEFAULT_MOCKTESTS: any[] = [];
+const DEFAULT_ADMIN_ADS: any[] = [];
 
 const MockTests = () => {
   const { user } = useAuth();
@@ -192,11 +71,11 @@ const MockTests = () => {
     import('../lib/lmsService').then(({ subscribeToMockTests, subscribeToUserEnrollments }) => {
       unsubMocks = subscribeToMockTests(
         (dbMocktests) => {
-          setMocktests(dbMocktests.length > 0 ? dbMocktests : DEFAULT_MOCKTESTS);
+          setMocktests(dbMocktests);
           setLoading(false);
         },
         () => {
-          setMocktests(DEFAULT_MOCKTESTS);
+          setMocktests([]);
           setLoading(false);
         }
       );
@@ -217,10 +96,10 @@ const MockTests = () => {
     getDocs(collection(db, 'ads'))
       .then((adsSnap) => {
         const dbAds = adsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setAds(dbAds.length > 0 ? dbAds : DEFAULT_ADMIN_ADS);
+        setAds(dbAds);
       })
       .catch(() => {
-        setAds(DEFAULT_ADMIN_ADS);
+        setAds([]);
       });
 
     return () => {
@@ -353,7 +232,7 @@ const MockTests = () => {
     return matchesSearch && matchesAuthority;
   });
 
-  const activeAd = ads[0] || DEFAULT_ADMIN_ADS[0];
+  const activeAd = ads[0] || null;
 
   return (
     <div className="min-h-screen bg-[#F8FAFF] text-[#0B1C30] pb-24">

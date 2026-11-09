@@ -6,6 +6,7 @@ import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { recordMockAttempt } from '../lib/stats';
+import QuestionImage from '../components/QuestionImage';
 
 const MockTest = () => {
   const { user } = useAuth();
@@ -429,6 +430,16 @@ const MockTest = () => {
                     <h2 className="text-xl md:text-3xl font-bold text-brand-dark leading-tight md:leading-snug">
                       {questions[currentQuestionIndex].text}
                     </h2>
+
+                    {questions[currentQuestionIndex].imageUrl && (
+                      <div className="mt-6 pt-6 border-t border-gray-100 flex justify-center">
+                        <QuestionImage 
+                          imageUrl={questions[currentQuestionIndex].imageUrl}
+                          altText={`Question ${currentQuestionIndex + 1} clinical media`}
+                          className="max-h-72 w-auto rounded-2xl"
+                        />
+                      </div>
+                    )}
                   </motion.div>
 
                   <motion.div
@@ -586,11 +597,22 @@ const MockTest = () => {
                             {statusLabel}
                           </div>
 
-                          <div className="flex gap-4 mb-8">
+                          <div className="flex gap-4 mb-6">
                             <span className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white flex-shrink-0 text-lg shadow-lg ${statusBg}`}>
                               {i + 1}
                             </span>
-                            <p className="font-bold text-lg md:text-2xl text-brand-dark leading-tight pt-1">{q.text}</p>
+                            <div className="space-y-3 flex-1 min-w-0">
+                              <p className="font-bold text-lg md:text-2xl text-brand-dark leading-tight pt-1">{q.text}</p>
+                              {q.imageUrl && (
+                                <div className="max-w-md pt-2">
+                                  <QuestionImage 
+                                    imageUrl={q.imageUrl}
+                                    altText={`Question ${i + 1} reference visual`}
+                                    className="max-h-60 rounded-2xl"
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="grid md:grid-cols-2 gap-4 mb-10 pl-0 md:pl-14">

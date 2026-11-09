@@ -46,14 +46,7 @@ const CourseDetail: React.FC = () => {
         if (docSnap.exists()) {
           setCourse({ id: docSnap.id, ...docSnap.data() });
         } else {
-          // Fallback to local default catalog
-          const localCourse = DEFAULT_LMS_CATALOG.find(c => c.id === id);
-          if (localCourse) {
-            setCourse(localCourse);
-          } else {
-            // Default to first catalog item if ID is arbitrary
-            setCourse(DEFAULT_LMS_CATALOG[0]);
-          }
+          setCourse(null);
         }
 
         // Check if user is enrolled
@@ -68,8 +61,7 @@ const CourseDetail: React.FC = () => {
         }
       } catch (err) {
         console.error("Error fetching course detail:", err);
-        const localCourse = DEFAULT_LMS_CATALOG.find(c => c.id === id) || DEFAULT_LMS_CATALOG[0];
-        setCourse(localCourse);
+        setCourse(null);
       } finally {
         setLoading(false);
       }
@@ -101,48 +93,8 @@ const CourseDetail: React.FC = () => {
     );
   }
 
-  const defaultModules = [
-    {
-      title: 'Module 1: High-Yield Cardiovascular & Internal Medicine',
-      lessons: [
-        { title: 'Acute Coronary Syndromes & ECG Recall Interpretation', duration: '48m', isFree: true },
-        { title: 'Hypertension Management Guidelines 2026', duration: '35m', isFree: false },
-        { title: 'Heart Failure & Arrhythmias Prometric Scenarios', duration: '52m', isFree: false }
-      ]
-    },
-    {
-      title: 'Module 2: Emergency & Critical Care Management',
-      lessons: [
-        { title: 'Trauma Life Support & Airway Protocols', duration: '42m', isFree: false },
-        { title: 'Shock, Sepsis & Resuscitation Blueprints', duration: '40m', isFree: false },
-        { title: 'Toxicology & Overdose Clinical Cases', duration: '30m', isFree: false }
-      ]
-    },
-    {
-      title: 'Module 3: Pediatrics, Neonatology & Pediatric Emergencies',
-      lessons: [
-        { title: 'Neonatal Resuscitation & Common Disorders', duration: '45m', isFree: false },
-        { title: 'Pediatric Infectious Diseases & Vaccination Charts', duration: '38m', isFree: false },
-        { title: 'Developmental Milestones & Pediatric Emergencies', duration: '50m', isFree: false }
-      ]
-    },
-    {
-      title: 'Module 4: Obstetrics, Gynecology & Women’s Health',
-      lessons: [
-        { title: 'Antenatal Care, Pre-eclampsia & Eclampsia', duration: '44m', isFree: false },
-        { title: 'Labor Abnormalities, Postpartum Hemorrhage', duration: '39m', isFree: false },
-        { title: 'Contraception & Gynecological Oncology Cases', duration: '32m', isFree: false }
-      ]
-    },
-    {
-      title: 'Module 5: Surgery, Orthopedics & Trauma Management',
-      lessons: [
-        { title: 'Acute Abdomen & Surgical Emergencies', duration: '46m', isFree: false },
-        { title: 'Wound Care, Burns & Suture Techniques', duration: '34m', isFree: false },
-        { title: 'Fracture Management & Orthopedic Emergencies', duration: '40m', isFree: false }
-      ]
-    }
-  ];
+  const courseModules = Array.isArray(course?.modules) ? course.modules : [];
+
 
   return (
     <div className="min-h-screen bg-[#F8FAFF] pb-24">
@@ -295,40 +247,48 @@ const CourseDetail: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-black text-xl text-[#0B1C30]">Curriculum Modules</h3>
-                  <span className="text-xs font-bold text-gray-500">{defaultModules.length} Modules • {course.videos || 42} Lessons</span>
+                  <span className="text-xs font-bold text-gray-500">{courseModules.length} Modules</span>
                 </div>
 
-                {defaultModules.map((module, mIdx) => (
-                  <div key={mIdx} className="bg-white rounded-2xl border border-[#E5EEFF] p-5 shadow-xs">
-                    <h4 className="font-extrabold text-sm text-[#0B1C30] mb-4 flex items-center justify-between">
-                      <span>{module.title}</span>
-                      <span className="text-[11px] text-gray-400 font-semibold">{module.lessons.length} Lessons</span>
-                    </h4>
-
-                    <div className="space-y-2.5">
-                      {module.lessons.map((lesson, lIdx) => (
-                        <div 
-                          key={lIdx}
-                          className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFF] border border-[#E5EEFF]/60 hover:border-[#3853A4]/30 transition-all text-xs"
-                        >
-                          <div className="flex items-center gap-3">
-                            <PlayCircle size={16} className={lesson.isFree ? 'text-[#3853A4]' : 'text-gray-400'} />
-                            <span className="font-bold text-[#0B1C30]">{lesson.title}</span>
-                            {lesson.isFree && (
-                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black text-[9px] rounded uppercase">
-                                Free Preview
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-gray-400 font-semibold">
-                            <span>{lesson.duration}</span>
-                            {!lesson.isFree && !isEnrolled && <Lock size={12} />}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                {courseModules.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-[#E5EEFF] p-8 text-center text-[#45464D]">
+                    <BookOpen size={36} className="mx-auto text-gray-300 mb-2" />
+                    <p className="text-xs font-bold text-[#0B1C30] mb-1">No Curriculum Modules Uploaded Yet</p>
+                    <p className="text-xs text-gray-500">Video lectures and modules for this track are currently being prepared by faculty.</p>
                   </div>
-                ))}
+                ) : (
+                  courseModules.map((module: any, mIdx: number) => (
+                    <div key={mIdx} className="bg-white rounded-2xl border border-[#E5EEFF] p-5 shadow-xs">
+                      <h4 className="font-extrabold text-sm text-[#0B1C30] mb-4 flex items-center justify-between">
+                        <span>{module.title}</span>
+                        <span className="text-[11px] text-gray-400 font-semibold">{(module.lessons || []).length} Lessons</span>
+                      </h4>
+
+                      <div className="space-y-2.5">
+                        {(module.lessons || []).map((lesson: any, lIdx: number) => (
+                          <div 
+                            key={lIdx}
+                            className="flex items-center justify-between p-3 rounded-xl bg-[#F8FAFF] border border-[#E5EEFF]/60 hover:border-[#3853A4]/30 transition-all text-xs"
+                          >
+                            <div className="flex items-center gap-3">
+                              <PlayCircle size={16} className={lesson.isFree ? 'text-[#3853A4]' : 'text-gray-400'} />
+                              <span className="font-bold text-[#0B1C30]">{lesson.title}</span>
+                              {lesson.isFree && (
+                                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 font-black text-[9px] rounded uppercase">
+                                  Free Preview
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-gray-400 font-semibold">
+                              <span>{lesson.duration || ''}</span>
+                              {!lesson.isFree && !isEnrolled && <Lock size={12} />}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
 

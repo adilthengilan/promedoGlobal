@@ -46,6 +46,8 @@ import {
   Upload,
   Trash2,
   AlertCircle,
+  AlertTriangle,
+  MapPin,
   Edit2,
   X,
   Image as ImageIcon
@@ -57,86 +59,16 @@ import QuestionBankSection from '../components/QuestionBankSection';
 import ImageBankSection from '../components/ImageBankSection';
 import { DEFAULT_LMS_CATALOG } from './Courses';
 import { usePortalSections } from '../lib/portalSections';
+import { EditProfileModal } from '../components/EditProfileModal';
+import { UserProfileData, isProfileIncomplete, calculateProfileCompletion } from '../lib/userProfileService';
+import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
 
-const DEFAULT_MOCK_TESTS = [
-  {
-    id: 'dha-gp-mock-1',
-    title: 'DHA GP Prometric Full Exam Simulator #1',
-    exam: 'DHA Dubai GP',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'DHA',
-    difficulty: 'Exam Grade'
-  },
-  {
-    id: 'haad-doh-mock-1',
-    title: 'HAAD / DOH Abu Dhabi Practice Exam #1',
-    exam: 'HAAD Abu Dhabi',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'HAAD',
-    difficulty: 'High Yield'
-  },
-  {
-    id: 'smle-saudi-mock-1',
-    title: 'SMLE Saudi Commission High-Yield Mock Test',
-    exam: 'SMLE Saudi',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'SMLE',
-    difficulty: 'Advanced'
-  },
-  {
-    id: 'moh-uae-mock-1',
-    title: 'MOH UAE Federal Medical Licensing Simulator',
-    exam: 'MOH UAE',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'MOH UAE',
-    difficulty: 'Exam Grade'
-  },
-  {
-    id: 'qchp-qatar-mock-1',
-    title: 'QCHP Qatar Prometric Practice Assessment',
-    exam: 'QCHP Qatar',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'QCHP',
-    difficulty: 'Standard'
-  },
-  {
-    id: 'omsb-oman-mock-1',
-    title: 'OMSB Oman Medical Specialty Board CBT Simulator',
-    exam: 'OMSB Oman',
-    questions: 150,
-    timeLimit: 180,
-    passingScore: 60,
-    passScore: 60,
-    category: 'OMSB',
-    difficulty: 'High Yield'
-  }
-];
-
-const STUDY_MATERIALS = [
-  { title: '2026 DHA GP Prometric High-Yield Recall Book', category: 'Recall Notes', size: '14.2 MB', pages: '184 Pages', type: 'PDF' },
-  { title: 'HAAD & DOH Clinical Case Guidelines Summary', category: 'Guidelines', size: '8.7 MB', pages: '96 Pages', type: 'PDF' },
-  { title: 'SMLE Saudi Commission Pharmacology Quick Notes', category: 'Pharmacology', size: '5.4 MB', pages: '64 Pages', type: 'PDF' },
-  { title: 'Medical Ethics, UAE Healthcare Law & Error Prevention', category: 'Ethics & Law', size: '4.1 MB', pages: '45 Pages', type: 'PDF' }
-];
+const DEFAULT_MOCK_TESTS: any[] = [];
+const STUDY_MATERIALS: any[] = [];
 
 
 const Dashboard = () => {
-  const { user, userName, userPhone, isAdmin, isStudent, role, logout } = useAuth();
+  const { user, userName, userPhone, isAdmin, isStudent, isPaid, role, logout } = useAuth();
   const navigate = useNavigate();
   
   const [candidateName, setCandidateName] = useState<string>('');
@@ -160,7 +92,7 @@ const Dashboard = () => {
       }))
     : availableMocktests;
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
-  const [availableCourses, setAvailableCourses] = useState<any[]>(DEFAULT_LMS_CATALOG);
+  const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Profile management states (Profile photo, Full name, E-mail, Phone number)
@@ -175,6 +107,8 @@ const Dashboard = () => {
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileSavedSuccess, setProfileSavedSuccess] = useState(false);
   const [profileError, setProfileError] = useState('');
+  const [fullProfile, setFullProfile] = useState<Partial<UserProfileData>>({});
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Keep profilePhone in sync with userPhone from AuthContext
   useEffect(() => {
@@ -418,16 +352,16 @@ const Dashboard = () => {
           // Real-time listeners for mock tests, courses, and enrollments
           import('../lib/lmsService').then(({ subscribeToMockTests, subscribeToCourses, subscribeToUserEnrollments }) => {
             subscribeToMockTests((fetchedTests) => {
-              setAvailableMocktests(fetchedTests.length > 0 ? fetchedTests : DEFAULT_MOCK_TESTS);
+              setAvailableMocktests(fetchedTests);
             });
 
-            let latestCourses = DEFAULT_LMS_CATALOG;
+            let latestCourses: any[] = [];
             let latestEnrolls: any[] = [];
 
             const syncEnrolled = () => {
               if (latestEnrolls.length > 0) {
                 const mapped = latestEnrolls.map((enr: any) => {
-                  const matched = latestCourses.find((c: any) => c.id === enr.courseId) || DEFAULT_LMS_CATALOG[0];
+                  const matched = latestCourses.find((c: any) => c.id === enr.courseId) || { id: enr.courseId, title: enr.courseTitle || "Enrolled Track" };
                   return {
                     ...matched,
                     enrollmentId: enr.id,
@@ -443,7 +377,7 @@ const Dashboard = () => {
             };
 
             subscribeToCourses((fetchedCourses) => {
-              latestCourses = fetchedCourses.length > 0 ? (fetchedCourses as any) : DEFAULT_LMS_CATALOG;
+              latestCourses = fetchedCourses || [];
               setAvailableCourses(latestCourses as any);
               syncEnrolled();
             });
@@ -455,7 +389,7 @@ const Dashboard = () => {
           });
         } catch (err) {
           console.error("Error fetching dashboard data:", err);
-          setAvailableMocktests(DEFAULT_MOCK_TESTS);
+          setAvailableMocktests([]);
           setEnrolledCourses([]);
         } finally {
           setLoading(false);
@@ -464,10 +398,10 @@ const Dashboard = () => {
 
       fetchDashboardData();
 
-      // Real-time listener for user document changes (instant phone, photo, and name sync)
       const unsubscribeUserDoc = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
         if (docSnap.exists()) {
           const u = docSnap.data();
+          setFullProfile({ uid: user.uid, ...u });
           const p = u.phone || u.phoneNumber || u.mobile || u.whatsapp || u.contactNumber;
           if (p) {
             setProfilePhone(p);
@@ -554,13 +488,19 @@ const Dashboard = () => {
               <HelpCircle size={18} />
               <span>Question Bank</span>
             </div>
-            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-              activeTab === 'qbank'
-                ? 'bg-white/20 text-white'
-                : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            }`}>
-              Practice
-            </span>
+            {!isAdmin && !isPaid ? (
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                <Lock size={9} /> PRO
+              </span>
+            ) : (
+              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                activeTab === 'qbank'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+              }`}>
+                Practice
+              </span>
+            )}
           </button>
 
           <button
@@ -575,37 +515,57 @@ const Dashboard = () => {
               <ImageIcon size={18} />
               <span>Image Bank</span>
             </div>
-            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-              activeTab === 'imagebank'
-                ? 'bg-white/20 text-white'
-                : 'bg-sky-50 text-sky-700 border border-sky-200'
-            }`}>
-              Spotters
-            </span>
+            {!isAdmin && !isPaid ? (
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                <Lock size={9} /> PRO
+              </span>
+            ) : (
+              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                activeTab === 'imagebank'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-sky-50 text-sky-700 border border-sky-200'
+              }`}>
+                Spotters
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveTab('learning')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'learning' || activeTab === 'catalog'
                 ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/20'
                 : 'text-[#45464D] hover:bg-[#E5EEFF]/60 hover:text-[#0B1C30]'
             }`}
           >
-            <MessageCircle size={18} />
-            <span>Exam Coaching</span>
+            <div className="flex items-center gap-3">
+              <MessageCircle size={18} />
+              <span>Exam Coaching</span>
+            </div>
+            {!isAdmin && !isPaid && (
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                <Lock size={9} /> PRO
+              </span>
+            )}
           </button>
 
           <button
             onClick={() => setActiveTab('mocktests')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
               activeTab === 'mocktests'
                 ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/20'
                 : 'text-[#45464D] hover:bg-[#E5EEFF]/60 hover:text-[#0B1C30]'
             }`}
           >
-            <Award size={18} />
-            <span>Mock Test Simulators</span>
+            <div className="flex items-center gap-3">
+              <Award size={18} />
+              <span>Mock Test Simulators</span>
+            </div>
+            {!isAdmin && !isPaid && (
+              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                <Lock size={9} /> PRO
+              </span>
+            )}
           </button>
 
           <button
@@ -698,287 +658,280 @@ const Dashboard = () => {
           })}
         </div>
 
-        {/* TAB: PROFILE (Candidate Profile with Photo, Name, Email, Phone) */}
-        {activeTab === 'profile' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl">
-            <div>
-              <h2 className="text-2xl font-black font-display text-[#0B1C30]">Candidate Profile</h2>
-              <p className="text-[#45464D] text-xs font-medium">Manage your personal details, profile photo, and registered contact information.</p>
-            </div>
+        {/* TAB: PROFILE (Complete Student Registration Details & Editable Profile) */}
+        {activeTab === 'profile' && (() => {
+          const mergedProfileData: Partial<UserProfileData> = {
+            name: profileName || candidateName || 'Doctor',
+            email: profileEmail || user?.email || '',
+            phone: profilePhone,
+            photoURL: profilePhoto,
+            ...fullProfile
+          };
+          const completionPercent = calculateProfileCompletion(mergedProfileData);
+          const incomplete = isProfileIncomplete(mergedProfileData);
 
-            {/* Profile Card */}
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E5EEFF] shadow-xs space-y-8">
-              {profileSavedSuccess && (
-                <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 border border-emerald-200 animate-in fade-in">
-                  <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                  <span>Profile photo updated successfully! Changes saved to your account.</span>
+          return (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl">
+              {/* Header & Main Edit Button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black font-display text-[#0B1C30]">Student Profile</h2>
+                  <p className="text-[#45464D] text-xs font-medium">Official Promedo candidate registration details, academic background, and location.</p>
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="px-5 py-2.5 bg-[#3853A4] hover:bg-[#2F4487] text-white font-bold text-xs rounded-2xl shadow-md shadow-[#3853A4]/20 transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                >
+                  <Edit2 size={15} />
+                  <span>Edit Profile</span>
+                </button>
+              </div>
 
-              {phoneSavedToast && (
-                <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 border border-emerald-200 animate-in fade-in">
-                  <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-                  <span>Mobile number updated successfully! Changes saved to your profile and Firestore database.</span>
-                </div>
-              )}
-
-              {profileError && (
-                <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 border border-red-200 animate-in fade-in">
-                  <AlertCircle size={18} className="text-red-600 shrink-0" />
-                  <span>{profileError}</span>
-                </div>
-              )}
-
-              {/* ONLY EDITABLE FEATURE: Profile Photo */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-8 border-b border-[#E5EEFF]">
-                <div className="relative group shrink-0">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden bg-[#EFF4FF] border-2 border-[#3853A4]/20 shadow-md flex items-center justify-center">
-                    {profilePhoto ? (
-                      <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-[#3853A4]">
-                        <User size={40} />
-                        <span className="text-[10px] font-black uppercase mt-1">No Photo</span>
-                      </div>
-                    )}
+              {/* Incomplete Profile Banner for existing users */}
+              {incomplete && (
+                <div className="bg-amber-50 border border-amber-200 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs">
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-extrabold text-amber-900 text-sm">Incomplete Student Profile ({completionPercent}% Complete)</h4>
+                      <p className="text-xs text-amber-800 mt-0.5 leading-relaxed">
+                        Some required academic or location fields are incomplete. Complete your profile details to finalize your GCC licensing transcript.
+                      </p>
+                    </div>
                   </div>
-                  <label 
-                    htmlFor="profile-photo-upload" 
-                    className="absolute -bottom-2 -right-2 p-2.5 bg-[#3853A4] hover:bg-[#2F4487] text-white rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
-                    title="Change profile picture"
+                  <button
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer"
                   >
-                    <Camera size={15} />
-                    <input 
-                      id="profile-photo-upload" 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handlePhotoFileChange} 
-                      className="hidden" 
-                    />
-                  </label>
+                    Complete Profile Now
+                  </button>
                 </div>
+              )}
 
-                <div className="space-y-3 flex-1 text-center sm:text-left">
-                  <div>
-                    <h3 className="font-extrabold text-[#0B1C30] text-sm">Profile Picture</h3>
-                    <p className="text-xs text-[#45464D] mt-0.5">Upload a custom profile photo for your account.</p>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-                    <label 
-                      htmlFor="profile-photo-upload" 
-                      className="px-3.5 py-2 bg-[#3853A4] hover:bg-[#2F4487] text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm shadow-[#3853A4]/20"
-                    >
-                      <Upload size={13} />
-                      <span>Upload New Photo</span>
-                    </label>
-
-                    {profilePhoto && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setProfilePhoto('');
-                          await handleSaveProfilePhoto('');
-                        }}
-                        className="px-3.5 py-2 bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 border border-gray-200 cursor-pointer"
-                      >
-                        <Trash2 size={13} />
-                        <span>Remove Photo</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={savingProfile}
-                      onClick={() => handleSaveProfilePhoto()}
-                      className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 border border-emerald-200 cursor-pointer disabled:opacity-60"
-                    >
-                      {savingProfile ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-emerald-700 border-t-transparent rounded-full animate-spin" />
-                          <span>Saving...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Check size={13} />
-                          <span>Save Picture</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+              {/* Profile Completion Progress Bar */}
+              <div className="bg-white rounded-3xl p-6 border border-[#E5EEFF] shadow-xs space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-[#0B1C30]">
+                  <span className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-[#3853A4]" />
+                    Profile Completeness Status
+                  </span>
+                  <span className="text-[#3853A4] font-black">{completionPercent}% Complete</span>
+                </div>
+                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-[#3853A4] via-blue-500 to-emerald-500 transition-all duration-500 rounded-full" 
+                    style={{ width: `${completionPercent}%` }}
+                  />
                 </div>
               </div>
 
-              {/* NON-EDITABLE CREDENTIALS: Name, Email, Phone provided at login */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-extrabold text-[#0B1C30] text-sm">Account Information</h3>
-                    <p className="text-xs text-[#45464D]">Details recorded at the time of account login and registration.</p>
+              {/* Main Profile Card: Header Banner & Personal Photo */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E5EEFF] shadow-xs space-y-8">
+                {profileSavedSuccess && (
+                  <div className="bg-emerald-50 text-emerald-800 p-4 rounded-2xl text-xs font-bold flex items-center gap-3 border border-emerald-200 animate-in fade-in">
+                    <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                    <span>Profile photo updated successfully! Changes saved to your account.</span>
+                  </div>
+                )}
+
+                {/* Profile Photo & Candidate Hero Banner */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pb-8 border-b border-[#E5EEFF]">
+                  <div className="relative group shrink-0">
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden bg-[#EFF4FF] border-2 border-[#3853A4]/20 shadow-md flex items-center justify-center">
+                      {profilePhoto ? (
+                        <img src={profilePhoto} alt="Profile" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-[#3853A4]">
+                          <User size={40} />
+                          <span className="text-[10px] font-black uppercase mt-1">No Photo</span>
+                        </div>
+                      )}
+                    </div>
+                    <label 
+                      htmlFor="profile-photo-upload" 
+                      className="absolute -bottom-2 -right-2 p-2.5 bg-[#3853A4] hover:bg-[#2F4487] text-white rounded-xl shadow-md cursor-pointer transition-all active:scale-95"
+                      title="Change profile picture"
+                    >
+                      <Camera size={15} />
+                      <input 
+                        id="profile-photo-upload" 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handlePhotoFileChange} 
+                        className="hidden" 
+                      />
+                    </label>
+                  </div>
+
+                  <div className="space-y-3 flex-1 text-center sm:text-left">
+                    <div>
+                      <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
+                        <h3 className="font-black text-xl text-[#0B1C30]">{mergedProfileData.name}</h3>
+                        <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase bg-blue-50 text-brand-blue border border-blue-200">
+                          {mergedProfileData.examPreparingFor || 'DHA Dubai'} Candidate
+                        </span>
+                      </div>
+                      <p className="text-xs text-[#45464D] mt-1 font-medium">{mergedProfileData.email}</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+                      <label 
+                        htmlFor="profile-photo-upload" 
+                        className="px-3.5 py-2 bg-[#3853A4] hover:bg-[#2F4487] text-white rounded-xl text-xs font-bold transition-all cursor-pointer inline-flex items-center gap-1.5 shadow-sm shadow-[#3853A4]/20"
+                      >
+                        <Upload size={13} />
+                        <span>Change Photo</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <Edit2 size={13} />
+                        <span>Edit All Details</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4 pt-1">
-                  {/* Non-editable: Full Name */}
-                  <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4.5 flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold text-[#45464D] uppercase tracking-wider flex items-center gap-1.5">
-                        <User size={13} className="text-[#3853A4]" />
-                        Full Name
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-base font-black text-[#0B1C30] truncate">
-                        {profileName || candidateName || 'Doctor'}
-                      </p>
-                      <p className="text-[10px] text-gray-400 font-medium mt-1">Provided during account registration</p>
-                    </div>
+                {/* SECTION 1: PERSONAL INFORMATION */}
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-extrabold text-[#0B1C30] text-sm flex items-center gap-2">
+                      <User size={16} className="text-[#3853A4]" />
+                      Personal Information
+                    </h3>
                   </div>
 
-                  {/* Phone Number Display & Management */}
-                  <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4.5 flex flex-col justify-between space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-extrabold text-[#45464D] uppercase tracking-wider flex items-center gap-1.5">
-                        <Phone size={13} className="text-[#3853A4]" />
-                        Phone Number
-                      </span>
-                      {profilePhone ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhoneInput(profilePhone);
-                            setIsEditingPhone(true);
-                          }}
-                          className="text-[11px] text-[#3853A4] font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                          title="Update phone number"
-                        >
-                          <Edit2 size={12} />
-                          <span>Update</span>
-                        </button>
-                      ) : (
-                        <span className="px-2 py-0.5 bg-amber-50 text-amber-700 text-[10px] font-black rounded-md border border-amber-200">
-                          Not Provided
-                        </span>
-                      )}
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Full Name</span>
+                      <p className="text-sm font-black text-[#0B1C30] truncate">{mergedProfileData.name}</p>
                     </div>
 
-                    {isEditingPhone ? (
-                      <div className="space-y-2 pt-1 animate-in fade-in">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="tel"
-                            value={phoneInput}
-                            onChange={(e) => setPhoneInput(e.target.value)}
-                            placeholder="e.g. +971 50 123 4567"
-                            autoFocus
-                            className="flex-1 bg-white border border-[#3853A4] px-3 py-1.5 rounded-xl text-xs font-bold text-[#0B1C30] outline-none focus:ring-2 focus:ring-[#3853A4]/20"
-                          />
-                          <button
-                            type="button"
-                            disabled={savingPhone || !phoneInput.trim()}
-                            onClick={() => handleSavePhone(phoneInput)}
-                            className="px-3.5 py-1.5 bg-[#3853A4] hover:bg-[#2F4487] text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1 shrink-0"
-                          >
-                            {savingPhone ? (
-                              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            ) : (
-                              <Check size={13} />
-                            )}
-                            <span>Save</span>
-                          </button>
-                          {profilePhone && (
-                            <button
-                              type="button"
-                              onClick={() => setIsEditingPhone(false)}
-                              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg cursor-pointer"
-                              title="Cancel"
-                            >
-                              <X size={15} />
-                            </button>
-                          )}
-                        </div>
-                        <p className="text-[10px] text-gray-400 font-medium">Enter your international phone number with country code</p>
-                      </div>
-                    ) : profilePhone ? (
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="text-base font-black text-[#0B1C30] truncate">
-                            {profilePhone}
-                          </p>
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Registered
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-gray-400 font-medium mt-1">Used for exam updates & WhatsApp alerts</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="text-xs text-gray-600 font-bold">
-                          Not provided at login
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPhoneInput('');
-                            setIsEditingPhone(true);
-                          }}
-                          className="w-full py-2 bg-[#3853A4] hover:bg-[#2F4487] text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shadow-[#3853A4]/20"
-                        >
-                          <Plus size={14} />
-                          <span>Add Mobile Number</span>
-                        </button>
-                        <p className="text-[10px] text-gray-400 font-medium">Link your phone number to receive exam alerts & SMS notifications</p>
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Email Address</span>
+                      <p className="text-sm font-black text-[#0B1C30] truncate">{mergedProfileData.email}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Phone Number</span>
+                      <p className="text-sm font-black text-[#0B1C30] truncate">{mergedProfileData.phone || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Date of Birth</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.dateOfBirth || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Gender</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.gender || 'Not Provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: ACADEMIC INFORMATION */}
+                <div className="space-y-4 pt-4 border-t border-[#E5EEFF]">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-extrabold text-[#0B1C30] text-sm flex items-center gap-2">
+                      <GraduationCap size={16} className="text-[#3853A4]" />
+                      Academic Background
+                    </h3>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2 bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Institution / College / School</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.institution || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Student ID</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.studentId || 'N/A'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Qualification Level</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.qualification || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Course / Program</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.course || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Current Year / Semester</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.currentYear || 'Not Provided'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 3: LOCATION INFORMATION */}
+                <div className="space-y-4 pt-4 border-t border-[#E5EEFF]">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-extrabold text-[#0B1C30] text-sm flex items-center gap-2">
+                      <MapPin size={16} className="text-[#3853A4]" />
+                      Location & Residency
+                    </h3>
+                  </div>
+
+                  <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Country</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.country || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">State / Emirate</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.state || 'Not Provided'}</p>
+                    </div>
+
+                    <div className="bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                      <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">City</span>
+                      <p className="text-sm font-black text-[#0B1C30]">{mergedProfileData.city || 'Not Provided'}</p>
+                    </div>
+
+                    {mergedProfileData.address && (
+                      <div className="sm:col-span-3 bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4 space-y-1">
+                        <span className="text-[10px] font-extrabold text-[#45464D] uppercase tracking-wider">Full Address</span>
+                        <p className="text-sm font-medium text-[#0B1C30]">{mergedProfileData.address}</p>
                       </div>
                     )}
                   </div>
-
-                  {/* Non-editable: E-mail */}
-                  <div className="sm:col-span-2 bg-[#EFF4FF]/30 border border-[#E5EEFF] rounded-2xl p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <span className="text-[11px] font-extrabold text-[#45464D] uppercase tracking-wider flex items-center gap-1.5">
-                        <Mail size={13} className="text-[#3853A4]" />
-                        E-mail Address
-                      </span>
-                      <p className="text-base font-black text-[#0B1C30] truncate">
-                        {profileEmail || user?.email || 'N/A'}
-                      </p>
-                      <p className="text-[10px] text-gray-400 font-medium">Primary credential used for authentication and portal sign-in</p>
-                    </div>
-                    <div className="flex items-center gap-2 self-start sm:self-center">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Verified Login ID
-                      </span>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Role & Status Card */}
-                <div className="p-4 bg-[#EFF4FF] rounded-2xl border border-[#E5EEFF] flex items-center justify-between gap-4 flex-wrap mt-4">
+                {/* SECTION 4: ACCOUNT & LICENSING DETAILS */}
+                <div className="p-5 bg-[#EFF4FF] rounded-2xl border border-[#E5EEFF] flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center font-black text-[#3853A4] shadow-xs">
                       <ShieldCheck size={20} />
                     </div>
                     <div>
-                      <p className="text-xs font-extrabold text-[#0B1C30]">Account Role & Status</p>
+                      <p className="text-xs font-extrabold text-[#0B1C30]">Promedo Account Record</p>
                       <p className="text-[11px] text-gray-500 font-medium">
-                        {role === 'admin' ? 'Administrator' : role === 'student' ? 'Course Enrolled Student' : 'Standard User'}
+                        UID: <span className="font-mono">{user?.uid?.substring(0, 12)}...</span> | Role: <span className="uppercase font-bold">{mergedProfileData.role || role}</span>
                       </p>
                     </div>
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
-                    role === 'admin' 
-                      ? 'bg-purple-100 text-purple-700 border-purple-200' 
-                      : role === 'student' 
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200' 
-                        : 'bg-gray-100 text-gray-700 border-gray-200'
-                  }`}>
-                    {role || 'User'}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="px-4 py-2 bg-[#3853A4] hover:bg-[#2F4487] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+                  >
+                    Edit Student Profile
+                  </button>
                 </div>
+
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          );
+        })()}
 
         {/* TAB 0: DASHBOARD OVERVIEW (BENTO GRID) */}
         {activeTab === 'overview' && (
@@ -1232,35 +1185,111 @@ const Dashboard = () => {
 
         {/* TAB 1: MY ENROLLED COURSES (CLASSROOM) */}
         {activeTab === 'learning' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black font-display text-[#0B1C30]">My Enrolled Courses</h2>
-                <p className="text-[#45464D] text-xs font-medium">Continue watching your video lectures, review clinical notes, and track your syllabus progress.</p>
-              </div>
-              <button 
-                onClick={() => setActiveTab('catalog')}
-                className="px-4 py-2.5 bg-[#3853A4] text-white rounded-xl text-xs font-bold hover:bg-[#2F4487] transition-all self-start sm:self-auto cursor-pointer"
-              >
-                Browse More Courses
-              </button>
-            </div>
-
-            {enrolledCourses.length === 0 ? (
-              <div className="bg-white p-12 rounded-3xl border border-[#E5EEFF] text-center space-y-4">
-                <BookOpen size={48} className="mx-auto text-gray-300" />
-                <h3 className="text-lg font-black text-[#0B1C30]">No courses enrolled yet</h3>
-                <p className="text-xs text-gray-500 max-w-md mx-auto">Explore our high-yield Gulf Prometric courses to start your video lectures and clinical blueprints.</p>
-                <button
+          !isAdmin && !isPaid ? (
+            <PremiumUpgradeScreen moduleName="Complete Courses" inline />
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black font-display text-[#0B1C30]">My Enrolled Courses</h2>
+                  <p className="text-[#45464D] text-xs font-medium">Continue watching your video lectures, review clinical notes, and track your syllabus progress.</p>
+                </div>
+                <button 
                   onClick={() => setActiveTab('catalog')}
-                  className="px-6 py-3 bg-[#3853A4] text-white text-xs font-bold rounded-2xl cursor-pointer"
+                  className="px-4 py-2.5 bg-[#3853A4] text-white rounded-xl text-xs font-bold hover:bg-[#2F4487] transition-all self-start sm:self-auto cursor-pointer"
                 >
-                  Explore Course Catalog
+                  Browse More Courses
                 </button>
               </div>
-            ) : (
+
+              {enrolledCourses.length === 0 ? (
+                <div className="bg-white p-12 rounded-3xl border border-[#E5EEFF] text-center space-y-4">
+                  <BookOpen size={48} className="mx-auto text-gray-300" />
+                  <h3 className="text-lg font-black text-[#0B1C30]">No courses enrolled yet</h3>
+                  <p className="text-xs text-gray-500 max-w-md mx-auto">Explore our high-yield Gulf Prometric courses to start your video lectures and clinical blueprints.</p>
+                  <button
+                    onClick={() => setActiveTab('catalog')}
+                    className="px-6 py-3 bg-[#3853A4] text-white text-xs font-bold rounded-2xl cursor-pointer"
+                  >
+                    Explore Course Catalog
+                  </button>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {enrolledCourses.map((course, idx) => (
+                    <div key={idx} className="bg-white rounded-3xl border border-[#E5EEFF] overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
+                      <div>
+                        <div className="relative h-44 w-full bg-gray-100">
+                          <img 
+                            src={course.image} 
+                            alt={course.title} 
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="absolute top-3 left-3 bg-[#131B2E]/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-wider">
+                            {course.authority || 'Prometric'}
+                          </div>
+                        </div>
+
+                        <div className="p-6">
+                          <h3 className="font-black text-base text-[#0B1C30] line-clamp-2 mb-3">
+                            {course.title}
+                          </h3>
+
+                          <CourseProgressBar 
+                            progress={course.progress || 35}
+                            totalLessons={course.lessonsCount || 48}
+                            completedLessons={course.completedLessons || 16}
+                            compact
+                            className="bg-[#F8FAFF] p-3 rounded-2xl border border-[#E5EEFF] mb-4"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="p-6 pt-0 space-y-2">
+                        <button
+                          onClick={() => navigate(`/player/${course.id}`)}
+                          className="w-full py-3.5 bg-[#3853A4] hover:bg-[#2F4487] text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-[#3853A4]/20"
+                        >
+                          <PlayCircle size={16} />
+                          <span>Open Video Classroom</span>
+                        </button>
+
+                        <button
+                          onClick={() => navigate(`/course/${course.id}`)}
+                          className="w-full py-2.5 text-center text-[#3853A4] font-bold text-xs hover:underline cursor-pointer"
+                        >
+                          View Syllabus & Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )
+        )}
+
+        {/* TAB 2: COURSE CATALOG */}
+        {activeTab === 'catalog' && (
+          !isAdmin && !isPaid ? (
+            <PremiumUpgradeScreen moduleName="Courses" inline />
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric LMS Course Catalog</h2>
+                  <p className="text-[#45464D] text-xs font-medium">Comprehensive video lecture programs, recall breakdowns, and clinical exam strategy tracks.</p>
+                </div>
+                <button 
+                  onClick={() => navigate('/courses')}
+                  className="text-[#3853A4] text-xs font-black hover:underline cursor-pointer"
+                >
+                  Open Full Catalog Page →
+                </button>
+              </div>
+
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {enrolledCourses.map((course, idx) => (
+                {availableCourses.map((course, idx) => (
                   <div key={idx} className="bg-white rounded-3xl border border-[#E5EEFF] overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
                     <div>
                       <div className="relative h-44 w-full bg-gray-100">
@@ -1272,193 +1301,137 @@ const Dashboard = () => {
                         <div className="absolute top-3 left-3 bg-[#131B2E]/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-wider">
                           {course.authority || 'Prometric'}
                         </div>
+                        <div className="absolute bottom-3 right-3 bg-white/95 px-2.5 py-1 rounded-lg text-xs font-black text-[#0B1C30] shadow-sm">
+                          ${course.price || 299}
+                        </div>
                       </div>
 
-                      <div className="p-6">
-                        <h3 className="font-black text-base text-[#0B1C30] line-clamp-2 mb-3">
+                      <div className="p-6 space-y-3">
+                        <div className="flex items-center gap-2 text-xs text-amber-500 font-bold">
+                          <Star size={14} className="fill-amber-400 text-amber-400" />
+                          <span>{course.rating || 4.9}</span>
+                          <span className="text-gray-400 font-normal">({course.reviewsCount || 340} reviews)</span>
+                        </div>
+
+                        <h3 className="font-black text-base text-[#0B1C30] line-clamp-2">
                           {course.title}
                         </h3>
 
-                        <CourseProgressBar 
-                          progress={course.progress || 35}
-                          totalLessons={course.lessonsCount || 48}
-                          completedLessons={course.completedLessons || 16}
-                          compact
-                          className="bg-[#F8FAFF] p-3 rounded-2xl border border-[#E5EEFF] mb-4"
-                        />
+                        <p className="text-xs text-gray-500 line-clamp-2 font-normal">
+                          {course.description}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] font-bold text-gray-600">
+                          <div className="flex items-center gap-1.5">
+                            <Video size={13} className="text-[#3853A4]" />
+                            <span>{course.durationHours || 40}+ Hours</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <BookOpen size={13} className="text-[#3853A4]" />
+                            <span>{course.lessonsCount || 48} Lessons</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
                     <div className="p-6 pt-0 space-y-2">
                       <button
-                        onClick={() => navigate(`/player/${course.id}`)}
+                        onClick={() => navigate(`/checkout/${course.id}`)}
                         className="w-full py-3.5 bg-[#3853A4] hover:bg-[#2F4487] text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-[#3853A4]/20"
                       >
-                        <PlayCircle size={16} />
-                        <span>Open Video Classroom</span>
+                        <Sparkles size={15} />
+                        <span>Enroll Now • ${course.price || 299}</span>
                       </button>
 
                       <button
                         onClick={() => navigate(`/course/${course.id}`)}
-                        className="w-full py-2.5 text-center text-[#3853A4] font-bold text-xs hover:underline cursor-pointer"
+                        className="w-full py-2 text-center text-gray-500 font-bold text-xs hover:text-[#0B1C30] cursor-pointer"
                       >
-                        View Syllabus & Details
+                        View Syllabus Curriculum
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* TAB 2: COURSE CATALOG */}
-        {activeTab === 'catalog' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric LMS Course Catalog</h2>
-                <p className="text-[#45464D] text-xs font-medium">Comprehensive video lecture programs, recall breakdowns, and clinical exam strategy tracks.</p>
-              </div>
-              <button 
-                onClick={() => navigate('/courses')}
-                className="text-[#3853A4] text-xs font-black hover:underline cursor-pointer"
-              >
-                Open Full Catalog Page →
-              </button>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {availableCourses.map((course, idx) => (
-                <div key={idx} className="bg-white rounded-3xl border border-[#E5EEFF] overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="relative h-44 w-full bg-gray-100">
-                      <img 
-                        src={course.image} 
-                        alt={course.title} 
-                        className="w-full h-full object-cover" 
-                      />
-                      <div className="absolute top-3 left-3 bg-[#131B2E]/90 backdrop-blur-md px-3 py-1 rounded-lg text-[10px] font-black text-white uppercase tracking-wider">
-                        {course.authority || 'Prometric'}
-                      </div>
-                      <div className="absolute bottom-3 right-3 bg-white/95 px-2.5 py-1 rounded-lg text-xs font-black text-[#0B1C30] shadow-sm">
-                        ${course.price || 299}
-                      </div>
-                    </div>
-
-                    <div className="p-6 space-y-3">
-                      <div className="flex items-center gap-2 text-xs text-amber-500 font-bold">
-                        <Star size={14} className="fill-amber-400 text-amber-400" />
-                        <span>{course.rating || 4.9}</span>
-                        <span className="text-gray-400 font-normal">({course.reviewsCount || 340} reviews)</span>
-                      </div>
-
-                      <h3 className="font-black text-base text-[#0B1C30] line-clamp-2">
-                        {course.title}
-                      </h3>
-
-                      <p className="text-xs text-gray-500 line-clamp-2 font-normal">
-                        {course.description}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 pt-2 text-[11px] font-bold text-gray-600">
-                        <div className="flex items-center gap-1.5">
-                          <Video size={13} className="text-[#3853A4]" />
-                          <span>{course.durationHours || 40}+ Hours</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen size={13} className="text-[#3853A4]" />
-                          <span>{course.lessonsCount || 48} Lessons</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 pt-0 space-y-2">
-                    <button
-                      onClick={() => navigate(`/checkout/${course.id}`)}
-                      className="w-full py-3.5 bg-[#3853A4] hover:bg-[#2F4487] text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-[#3853A4]/20"
-                    >
-                      <Sparkles size={15} />
-                      <span>Enroll Now • ${course.price || 299}</span>
-                    </button>
-
-                    <button
-                      onClick={() => navigate(`/course/${course.id}`)}
-                      className="w-full py-2 text-center text-gray-500 font-bold text-xs hover:text-[#0B1C30] cursor-pointer"
-                    >
-                      View Syllabus Curriculum
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+            </motion.div>
+          )
         )}
 
         {/* TAB: PROMETRIC EXAM SIMULATORS */}
         {activeTab === 'mocktests' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-            <div>
-              <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric Exam Simulators</h2>
-              <p className="text-[#45464D] text-xs font-medium">Full-length timed exam simulators strictly matched to DHA, HAAD, and SMLE blueprints.</p>
-            </div>
+          !isAdmin && !isPaid ? (
+            <PremiumUpgradeScreen moduleName="Mock Tests" inline />
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric Exam Simulators</h2>
+                <p className="text-[#45464D] text-xs font-medium">Full-length timed exam simulators strictly matched to DHA, HAAD, and SMLE blueprints.</p>
+              </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedMocktests.map((test, idx) => (
-                <div key={idx} className="bg-white p-6 rounded-3xl border border-[#E5EEFF] shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center gap-3.5 mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-[#EFF4FF] text-[#3853A4] flex items-center justify-center font-bold shrink-0">
-                        <Award size={24} />
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedMocktests.map((test, idx) => (
+                  <div key={idx} className="bg-white p-6 rounded-3xl border border-[#E5EEFF] shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center gap-3.5 mb-4">
+                        <div className="w-12 h-12 rounded-2xl bg-[#EFF4FF] text-[#3853A4] flex items-center justify-center font-bold shrink-0">
+                          <Award size={24} />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block">{test.category}</span>
+                          <h3 className="font-extrabold text-[#0B1C30] text-sm leading-snug">{test.title}</h3>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block">{test.category}</span>
-                        <h3 className="font-extrabold text-[#0B1C30] text-sm leading-snug">{test.title}</h3>
+
+                      <div className="grid grid-cols-3 gap-2 p-3 bg-[#EFF4FF] rounded-2xl mb-6 text-center border border-[#E5EEFF]">
+                        <div>
+                          <span className="text-[10px] font-bold text-[#45464D] block">Questions</span>
+                          <span className="text-xs font-black text-[#0B1C30]">{Array.isArray(test.questions) ? test.questions.length : (typeof test.questions === 'number' ? test.questions : 150)} Qs</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-[#45464D] block">Time Limit</span>
+                          <span className="text-xs font-black text-[#0B1C30]">{test.timeLimit} mins</span>
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-bold text-[#45464D] block">Pass Score</span>
+                          <span className="text-xs font-black text-emerald-700">{test.passingScore !== undefined ? test.passingScore : (test.passScore !== undefined ? test.passScore : 60)}%</span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 p-3 bg-[#EFF4FF] rounded-2xl mb-6 text-center border border-[#E5EEFF]">
-                      <div>
-                        <span className="text-[10px] font-bold text-[#45464D] block">Questions</span>
-                        <span className="text-xs font-black text-[#0B1C30]">{Array.isArray(test.questions) ? test.questions.length : (typeof test.questions === 'number' ? test.questions : 150)} Qs</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-[#45464D] block">Time Limit</span>
-                        <span className="text-xs font-black text-[#0B1C30]">{test.timeLimit} mins</span>
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-bold text-[#45464D] block">Pass Score</span>
-                        <span className="text-xs font-black text-emerald-700">{test.passingScore !== undefined ? test.passingScore : (test.passScore !== undefined ? test.passScore : 60)}%</span>
-                      </div>
-                    </div>
+                    <button 
+                      onClick={() => navigate(`/mock-test-intro`)}
+                      className="w-full py-3.5 rounded-2xl bg-[#3853A4] text-white font-extrabold text-xs hover:bg-[#2F4487] transition-all shadow-md shadow-[#3853A4]/20 flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <span>Launch Simulator</span>
+                      <PlayCircle size={16} />
+                    </button>
                   </div>
-
-                  <button 
-                    onClick={() => navigate(`/mock-test-intro`)}
-                    className="w-full py-3.5 rounded-2xl bg-[#3853A4] text-white font-extrabold text-xs hover:bg-[#2F4487] transition-all shadow-md shadow-[#3853A4]/20 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <span>Launch Simulator</span>
-                    <PlayCircle size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )
         )}
 
         {/* TAB 4: QUESTION BANK (Includes Bookmarked MCQs & Custom Module) */}
         {activeTab === 'qbank' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <QuestionBankSection isStudent={isStudent} isAdmin={isAdmin} />
-          </motion.div>
+          !isAdmin && !isPaid ? (
+            <PremiumUpgradeScreen moduleName="Question Bank" inline />
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <QuestionBankSection isStudent={isStudent} isAdmin={isAdmin} />
+            </motion.div>
+          )
         )}
 
         {/* TAB: IMAGE BANK (Clinical Visual Spotters, ECGs, Radiology, Dermatology, Ophthalmology) */}
         {activeTab === 'imagebank' && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <ImageBankSection isStudent={isStudent} isAdmin={isAdmin} />
-          </motion.div>
+          !isAdmin && !isPaid ? (
+            <PremiumUpgradeScreen moduleName="Question Bank & Image Spotters" inline />
+          ) : (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+              <ImageBankSection isStudent={isStudent} isAdmin={isAdmin} />
+            </motion.div>
+          )
         )}
 
         {/* TAB 5: ANALYTICS & READINESS */}
@@ -1469,55 +1442,65 @@ const Dashboard = () => {
               <p className="text-[#45464D] text-xs font-medium">Track your study accuracy, subject strengths, and licensing exam readiness index.</p>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-[#E5EEFF] shadow-xs space-y-6">
-                <h3 className="text-lg font-extrabold text-[#0B1C30] flex items-center gap-2">
-                  <BarChart3 size={20} className="text-[#3853A4]" />
-                  Subject Accuracy Breakdown
-                </h3>
-
-                <div className="space-y-4">
-                  {[
-                    { subject: 'Internal Medicine', score: 82, color: 'bg-emerald-500' },
-                    { subject: 'General Surgery & Trauma', score: 76, color: 'bg-blue-500' },
-                    { subject: 'Obstetrics & Gynaecology', score: 88, color: 'bg-purple-500' },
-                    { subject: 'Paediatrics & Neonatology', score: 70, color: 'bg-amber-500' },
-                    { subject: 'Pharmacology & Therapeutics', score: 65, color: 'bg-rose-500' },
-                    { subject: 'Medical Ethics & Patient Safety', score: 94, color: 'bg-teal-500' }
-                  ].map((item, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-bold text-[#0B1C30]">
-                        <span>{item.subject}</span>
-                        <span className="font-black">{item.score}% Accuracy</span>
-                      </div>
-                      <div className="w-full h-3 bg-[#EFF4FF] rounded-full overflow-hidden p-0.5">
-                        <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: `${item.score}%` }} />
-                      </div>
-                    </div>
-                  ))}
+            {userAttempts.length === 0 ? (
+              <div className="bg-white p-12 rounded-3xl border border-[#E5EEFF] text-center max-w-2xl mx-auto shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-[#EFF4FF] border border-[#E5EEFF] text-[#3853A4] flex items-center justify-center mx-auto mb-4">
+                  <BarChart3 size={32} />
                 </div>
+                <h3 className="text-xl font-bold font-display text-[#0B1C30] mb-2">No Performance Records Yet</h3>
+                <p className="text-xs text-[#45464D] max-w-md mx-auto mb-6">
+                  Complete mock test simulators or practice drills to generate your personalized performance breakdown and exam readiness score.
+                </p>
+                <button
+                  onClick={() => setActiveTab('mocktests')}
+                  className="px-6 py-2.5 bg-[#3853A4] hover:bg-[#2F4487] text-white text-xs font-bold rounded-xl cursor-pointer shadow-md transition-all"
+                >
+                  Start Practice Simulator
+                </button>
               </div>
-
-              <div className="bg-white p-8 rounded-3xl border border-[#E5EEFF] shadow-xs flex flex-col justify-between">
-                <div>
-                  <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 border border-emerald-100">
-                    <BrainCircuit size={36} />
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 bg-white p-8 rounded-3xl border border-[#E5EEFF] shadow-xs space-y-6">
+                  <h3 className="text-lg font-extrabold text-[#0B1C30] flex items-center gap-2">
+                    <BarChart3 size={20} className="text-[#3853A4]" />
+                    Recent Simulator Attempts
+                  </h3>
+                  <div className="divide-y divide-[#E5EEFF]">
+                    {userAttempts.map((attempt, idx) => (
+                      <div key={idx} className="py-3 flex items-center justify-between text-xs">
+                        <div>
+                          <span className="font-bold text-[#0B1C30] block">{attempt.examTitle || attempt.mocktestTitle || `Attempt #${idx + 1}`}</span>
+                          <span className="text-[11px] text-[#45464D]">{attempt.completedAt ? new Date(attempt.completedAt).toLocaleDateString() : 'Completed'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className={`font-black ${(attempt.percentage ?? attempt.score ?? 0) >= 60 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                            {Math.round(attempt.percentage ?? attempt.score ?? 0)}%
+                          </span>
+                          <span className="block text-[10px] text-gray-400">{(attempt.percentage ?? attempt.score ?? 0) >= 60 ? 'PASS' : 'RETRY'}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 block mb-1">
-                    Promedic Exam Score Index
-                  </span>
-                  <h3 className="text-3xl font-black text-[#0B1C30] mb-2">78% Passed</h3>
-                  <p className="text-[#45464D] text-xs font-medium leading-relaxed mb-6">
-                    Based on your mock test accuracy and completed video recall modules, your probability of passing the DHA/HAAD GP Prometric exam on the first attempt is high.
-                  </p>
                 </div>
 
-                <div className="bg-[#EFF4FF] p-4 rounded-2xl border border-[#E5EEFF]">
-                  <p className="text-xs font-bold text-[#3853A4] mb-1">Recommended Focus:</p>
-                  <p className="text-[11px] text-[#45464D] font-medium">Review Pharmacology & Dosing Guidelines video lessons in your classroom player.</p>
+                <div className="bg-white p-8 rounded-3xl border border-[#E5EEFF] shadow-xs flex flex-col justify-between">
+                  <div>
+                    <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 border border-emerald-100">
+                      <BrainCircuit size={36} />
+                    </div>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-600 block mb-1">
+                      Overall Simulator Average
+                    </span>
+                    <h3 className="text-3xl font-black text-[#0B1C30] mb-2">
+                      {Math.round(userAttempts.reduce((acc, a) => acc + (a.percentage ?? a.score ?? 0), 0) / userAttempts.length)}%
+                    </h3>
+                    <p className="text-[#45464D] text-xs font-medium leading-relaxed mb-6">
+                      Calculated across your {userAttempts.length} completed simulator session{userAttempts.length > 1 ? 's' : ''}.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </motion.div>
         )}
 
@@ -1529,34 +1512,38 @@ const Dashboard = () => {
               <p className="text-[#45464D] text-xs font-medium">Download high-yield recall books, clinical summaries, and official exam syllabus guides.</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              {STUDY_MATERIALS.map((mat, i) => (
-                <div key={i} className="bg-white p-6 rounded-3xl border border-[#E5EEFF] shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center font-black text-xs shrink-0 border border-red-100">
-                      <FileText size={26} />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block mb-0.5">{mat.category}</span>
-                      <h4 className="font-extrabold text-[#0B1C30] text-sm mb-1">{mat.title}</h4>
-                      <div className="flex items-center gap-3 text-xs text-[#45464D] font-bold">
-                        <span>{mat.pages}</span>
-                        <span>•</span>
-                        <span>{mat.size}</span>
+            {STUDY_MATERIALS.length === 0 ? (
+              <div className="bg-white p-12 rounded-3xl border border-[#E5EEFF] text-center max-w-2xl mx-auto shadow-xs">
+                <div className="w-16 h-16 rounded-2xl bg-[#EFF4FF] border border-[#E5EEFF] text-[#3853A4] flex items-center justify-center mx-auto mb-4">
+                  <FileText size={32} />
+                </div>
+                <h3 className="text-xl font-bold font-display text-[#0B1C30] mb-2">No Study Handouts Uploaded</h3>
+                <p className="text-xs text-[#45464D] max-w-md mx-auto">
+                  There are currently no study recall booklets or PDF handouts uploaded. Check back soon or contact your course coordinator.
+                </p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                {STUDY_MATERIALS.map((mat, i) => (
+                  <div key={i} className="bg-white p-6 rounded-3xl border border-[#E5EEFF] shadow-xs flex items-center justify-between gap-4 hover:shadow-md transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-red-50 text-red-500 flex items-center justify-center font-black text-xs shrink-0 border border-red-100">
+                        <FileText size={26} />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block mb-0.5">{mat.category}</span>
+                        <h4 className="font-extrabold text-[#0B1C30] text-sm mb-1">{mat.title}</h4>
+                        <div className="flex items-center gap-3 text-xs text-[#45464D] font-bold">
+                          <span>{mat.pages}</span>
+                          <span>•</span>
+                          <span>{mat.size}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  <button 
-                    onClick={() => alert(`Downloading ${mat.title}...`)}
-                    className="p-3 bg-[#EFF4FF] text-[#3853A4] hover:bg-[#3853A4] hover:text-white rounded-2xl transition-all shrink-0 cursor-pointer"
-                    title="Download PDF"
-                  >
-                    <Download size={20} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -1573,6 +1560,29 @@ const Dashboard = () => {
           Start Practice Q-Bank
         </span>
       </button>
+
+      {/* Edit Profile Modal Dialog */}
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        initialProfile={{
+          uid: user?.uid,
+          name: profileName || candidateName || 'Doctor',
+          email: profileEmail || user?.email || '',
+          phone: profilePhone,
+          photoURL: profilePhoto,
+          ...fullProfile
+        }}
+        onProfileUpdated={(updatedData) => {
+          setFullProfile(prev => ({ ...prev, ...updatedData }));
+          if (updatedData.name) {
+            setProfileName(updatedData.name);
+            setCandidateName(updatedData.name);
+          }
+          if (updatedData.phone) setProfilePhone(updatedData.phone);
+          if (updatedData.photoURL !== undefined) setProfilePhoto(updatedData.photoURL);
+        }}
+      />
 
     </div>
   );

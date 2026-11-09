@@ -73,135 +73,22 @@ export function toggleQuestionBookmark(questionId: string): string[] {
   return next;
 }
 
-export const DEFAULT_QUESTION_FOLDERS: QuestionFolder[] = [
-  {
-    id: 'fld-im-cardio',
-    name: 'Internal Medicine & Acute Cardiology',
-    code: 'QB-FLD-IM',
-    description: 'High-yield clinical scenarios on inferior STEMI contraindications, emergency ECG interpretations, heart failure regimens, and glycemic targets.',
-    selectedQuestionIds: ['q-im-1'],
-    selectedQuestions: [
-      {
-        id: 'q-im-1',
-        subjectId: 'internal-medicine',
-        subjectName: 'Internal Medicine',
-        text: 'A 58-year-old male with type 2 diabetes presents with crushing substernal chest pain radiating to his left jaw for 45 minutes. ECG reveals ST-segment elevation in leads II, III, and aVF with reciprocal ST depression in I and aVL. Blood pressure is 92/60 mmHg, heart rate is 50 bpm, and clear lung fields on auscultation. Which of the following medications is strictly contraindicated in this patient’s initial management?',
-        options: [
-          'Aspirin 300 mg chewed',
-          'Intravenous Nitroglycerin infusion',
-          'Unfractionated Heparin intravenous bolus',
-          'Ticagrelor 180 mg loading dose'
-        ],
-        correctAnswer: 1,
-        explanation: 'Nitroglycerin and other nitrates are strictly contraindicated in acute inferior STEMI with right ventricular involvement or hypotension, as right ventricular output is strictly preload-dependent. Vasodilators cause severe refractory hypotension and cardiogenic shock.',
-        createdAt: '2025-01-01T00:00:00.000Z'
-      }
-    ],
-    subjectNames: ['Internal Medicine'],
-    isActive: true,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'fld-surgery-trauma',
-    name: 'General Surgery & Trauma Resuscitation',
-    code: 'QB-FLD-SURG',
-    description: 'Critical ATLS protocols: tension pneumothorax needle decompression, shock class distinction, acute abdomen workup, and appendicitis differentials.',
-    selectedQuestionIds: ['q-surg-1'],
-    selectedQuestions: [
-      {
-        id: 'q-surg-1',
-        subjectId: 'general-surgery',
-        subjectName: 'General Surgery',
-        text: 'A 28-year-old unrestrained driver is brought to the trauma bay following a high-speed collision. He is severely tachypneic (RR 36/min), cyanotic, with absent left-sided breath sounds and marked tracheal deviation to the right. Blood pressure is 75/40 mmHg and heart rate is 135 bpm. What is the immediate next step in management?',
-        options: [
-          'Stat portable upright chest X-ray',
-          'Immediate needle decompression in 2nd intercostal space mid-clavicular line',
-          'Urgent Focused Assessment with Sonography for Trauma (FAST) scan',
-          'Endotracheal intubation with rapid sequence induction'
-        ],
-        correctAnswer: 1,
-        explanation: 'Tension pneumothorax is a clinical diagnosis characterized by hemodynamic collapse, ipsilateral absent breath sounds, hyperresonance, and contralateral tracheal shift. Immediate needle decompression must be performed without awaiting radiologic confirmation.',
-        createdAt: '2025-01-01T00:00:00.000Z'
-      }
-    ],
-    subjectNames: ['General Surgery'],
-    isActive: true,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'fld-obg-maternal',
-    name: 'Obstetrics & Gynaecology Essentials',
-    code: 'QB-FLD-OBG',
-    description: 'Pre-eclampsia and eclampsia seizure prophylaxis with Magnesium Sulphate, postpartum hemorrhage management, and fetal heart rate decelerations.',
-    selectedQuestionIds: ['q-obg-1'],
-    selectedQuestions: [
-      {
-        id: 'q-obg-1',
-        subjectId: 'obstetrics-gynaecology',
-        subjectName: 'Obstetrics & Gynaecology',
-        text: 'A 32-year-old primigravida at 34 weeks gestation presents with persistent severe frontal headache, blurred vision, and right upper quadrant epigastric pain. Blood pressure is 172/112 mmHg on repeated checks. Urinalysis demonstrates 3+ protein. What is the drug of choice for the prevention of maternal seizures?',
-        options: [
-          'Intravenous Diazepam bolus',
-          'Intravenous Magnesium Sulphate',
-          'Intravenous Phenytoin loading dose',
-          'Oral Labetalol 200 mg'
-        ],
-        correctAnswer: 1,
-        explanation: 'Intravenous Magnesium Sulphate is the undisputed gold-standard anticonvulsant for seizure prophylaxis in severe pre-eclampsia and eclampsia. Calcium gluconate 10% is the immediate antidote for toxicity.',
-        createdAt: '2025-01-01T00:00:00.000Z'
-      }
-    ],
-    subjectNames: ['Obstetrics & Gynaecology'],
-    isActive: true,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z'
-  },
-  {
-    id: 'fld-pediatrics-core',
-    name: 'Paediatrics & Neonatal Emergencies',
-    code: 'QB-FLD-PAED',
-    description: 'Pediatric croup vs epiglottitis distinction, oral Dexamethasone protocols, acute bronchiolitis management, and febrile seizures.',
-    selectedQuestionIds: ['q-paed-1'],
-    selectedQuestions: [
-      {
-        id: 'q-paed-1',
-        subjectId: 'paediatrics',
-        subjectName: 'Paediatrics',
-        text: 'A 2-year-old toddler is brought to the emergency department at 2:00 AM with sudden onset of a barking seal-like cough, hoarseness, and inspiratory stridor audible at rest with suprasternal retractions. He has a mild coryzal prodrome. What is the most appropriate first-line pharmacotherapy?',
-        options: [
-          'Oral Amoxicillin-Clavulanic acid for 7 days',
-          'Single dose oral Dexamethasone (0.15–0.6 mg/kg) or nebulized Budesonide',
-          'Intravenous Ceftriaxone 100 mg/kg',
-          'Inhaled Salbutamol nebulization every 20 minutes'
-        ],
-        correctAnswer: 1,
-        explanation: 'Croup (laryngotracheobronchitis) is managed with corticosteroids (oral dexamethasone 0.15-0.6 mg/kg). For moderate to severe stridor at rest with retractions, nebulized epinephrine is also co-administered.',
-        createdAt: '2025-01-01T00:00:00.000Z'
-      }
-    ],
-    subjectNames: ['Paediatrics'],
-    isActive: true,
-    createdAt: '2025-01-01T00:00:00.000Z',
-    updatedAt: '2025-01-01T00:00:00.000Z'
-  }
-];
+export const DEFAULT_QUESTION_FOLDERS: QuestionFolder[] = [];
 
 // Read all question folders
 export function getQuestionFolders(): QuestionFolder[] {
-  if (typeof window === 'undefined') return DEFAULT_QUESTION_FOLDERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(FOLDERS_STORAGE_KEY);
-    if (!raw) return DEFAULT_QUESTION_FOLDERS;
+    if (!raw) return [];
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      return DEFAULT_QUESTION_FOLDERS;
+    if (!Array.isArray(parsed)) {
+      return [];
     }
     return parsed;
   } catch (e) {
     console.error('Error reading question folders:', e);
-    return DEFAULT_QUESTION_FOLDERS;
+    return [];
   }
 }
 

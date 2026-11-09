@@ -20,77 +20,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
-export const DEFAULT_LMS_CATALOG = [
-  {
-    id: 'dha-gp-mastery',
-    title: 'DHA General Practitioner (GP) Exam Preparation Course',
-    category: 'Dubai Health Authority',
-    authority: 'DHA',
-    tag: 'Bestseller',
-    videos: 42,
-    modules: 6,
-    hours: '38h 45m',
-    price: 299,
-    originalPrice: 499,
-    rating: 4.9,
-    reviews: 128,
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=600',
-    description: 'Complete GP Prometric preparation including high-yield video lectures, recall collections, and full exam coverage.'
-  },
-  {
-    id: 'haad-doh-intensive',
-    title: 'HAAD / DOH Abu Dhabi Licensing Exam Mastery',
-    category: 'Department of Health',
-    authority: 'HAAD',
-    tag: 'High Yield',
-    videos: 36,
-    modules: 5,
-    hours: '32h 10m',
-    price: 279,
-    originalPrice: 450,
-    rating: 4.8,
-    reviews: 94,
-    image: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&q=80&w=600',
-    description: 'In-depth video modules focusing on HAAD GP syllabus, clinical scenario questions, and guidelines.'
-  },
-  {
-    id: 'moh-smle-prometric',
-    title: 'MOH & SMLE Saudi Medical Licensing Exam Course',
-    category: 'Ministry of Health',
-    authority: 'MOH / SMLE',
-    tag: 'Updated 2026',
-    videos: 50,
-    modules: 8,
-    hours: '45h 20m',
-    price: 320,
-    originalPrice: 500,
-    rating: 5.0,
-    reviews: 156,
-    image: 'https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&q=80&w=600',
-    description: 'Specialized video lectures and Q-banks aligned with Saudi Commission for Health Specialties (SCFHS).'
-  },
-  {
-    id: 'omsb-oman-prometric',
-    title: 'OMSB Oman Medical Specialty Board Exam Course',
-    category: 'Oman Medical Specialty',
-    authority: 'OMSB',
-    tag: 'Prometric',
-    videos: 32,
-    modules: 5,
-    hours: '28h 15m',
-    price: 260,
-    originalPrice: 420,
-    rating: 4.9,
-    reviews: 72,
-    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&q=80&w=600',
-    description: 'Targeted preparation for Oman Medical Specialty Board GP exam with practice questions and mock tests.'
-  }
-];
+export const DEFAULT_LMS_CATALOG: any[] = [];
 
 const Courses: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [courses, setCourses] = useState<any[]>(DEFAULT_LMS_CATALOG);
+  const [courses, setCourses] = useState<any[]>([]);
   const [userEnrollments, setUserEnrollments] = useState<string[]>([]);
   const [activeAd, setActiveAd] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,9 +39,7 @@ const Courses: React.FC = () => {
         // Fetch courses from Firestore
         const coursesSnap = await getDocs(collection(db, 'courses'));
         const fetchedCourses = coursesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (fetchedCourses.length > 0) {
-          setCourses(fetchedCourses);
-        }
+        setCourses(fetchedCourses);
 
         // Fetch Ads
         const adsSnap = await getDocs(query(collection(db, 'ads'), where('active', '==', true)));
@@ -246,7 +179,7 @@ const Courses: React.FC = () => {
                   {/* Card Media Banner */}
                   <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
                     <img
-                      src={course.image || DEFAULT_LMS_CATALOG[0].image}
+                      src={course.image || 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&q=80&w=600'}
                       alt={course.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
@@ -356,14 +289,22 @@ const Courses: React.FC = () => {
         {filteredCourses.length === 0 && (
           <div className="text-center py-20 bg-white rounded-3xl border border-[#E5EEFF] p-8">
             <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-black text-[#0B1C30] mb-2">No courses match your filter</h3>
-            <p className="text-xs text-gray-500 mb-6">Try searching for a different health authority or medical keyword.</p>
-            <button
-              onClick={() => { setSearchQuery(''); setSelectedAuthority('ALL'); }}
-              className="px-6 py-2.5 bg-[#3853A4] text-white rounded-xl font-bold text-xs"
-            >
-              Reset Filters
-            </button>
+            <h3 className="text-lg font-black text-[#0B1C30] mb-2">
+              {courses.length === 0 ? 'No courses currently published' : 'No courses match your filter'}
+            </h3>
+            <p className="text-xs text-gray-500 mb-6">
+              {courses.length === 0 
+                ? 'There are currently no active courses published in the catalog. Check back soon or contact administration.' 
+                : 'Try searching for a different health authority or medical keyword.'}
+            </p>
+            {courses.length > 0 && (
+              <button
+                onClick={() => { setSearchQuery(''); setSelectedAuthority('ALL'); }}
+                className="px-6 py-2.5 bg-[#3853A4] text-white rounded-xl font-bold text-xs cursor-pointer hover:bg-[#2F4487] transition-all"
+              >
+                Reset Filters
+              </button>
+            )}
           </div>
         )}
       </div>

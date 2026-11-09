@@ -4,6 +4,8 @@ import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export type UserRole = 'admin' | 'user' | 'student';
+export type PaymentStatus = 'PAID' | 'UNPAID';
+export type AccessStatus = 'ACTIVE' | 'LOCKED';
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +15,10 @@ interface AuthContextType {
   isStudent: boolean;
   loading: boolean;
   isAdmin: boolean;
+  isPaid: boolean;
+  paymentStatus: PaymentStatus;
+  accessStatus: AccessStatus;
+  paymentActivatedAt?: string;
   logout: () => Promise<void>;
 }
 
@@ -24,6 +30,10 @@ const AuthContext = createContext<AuthContextType>({
   isStudent: false,
   loading: true, 
   isAdmin: false,
+  isPaid: false,
+  paymentStatus: 'UNPAID',
+  accessStatus: 'LOCKED',
+  paymentActivatedAt: undefined,
   logout: async () => {}
 });
 
@@ -35,6 +45,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isStudent, setIsStudent] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isPaid, setIsPaid] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>('UNPAID');
+  const [accessStatus, setAccessStatus] = useState<AccessStatus>('LOCKED');
+  const [paymentActivatedAt, setPaymentActivatedAt] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
@@ -53,6 +67,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole('user');
         setUserName('');
         setUserPhone('');
+        setIsPaid(false);
+        setPaymentStatus('UNPAID');
+        setAccessStatus('LOCKED');
+        setPaymentActivatedAt(undefined);
         setLoading(false);
         return;
       }
@@ -74,6 +92,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setRole(resolvedRole);
             setIsAdmin(resolvedRole === 'admin');
             setIsStudent(resolvedRole === 'student' || resolvedRole === 'admin');
+
+            // Resolve Payment & Access Status
+            const isUserAdmin = isBootstrapAdmin || resolvedRole === 'admin';
+            const isStudentPaid = isUserAdmin || userData?.paymentStatus === 'PAID';
+            setIsPaid(isStudentPaid);
+            setPaymentStatus(isStudentPaid ? 'PAID' : 'UNPAID');
+            setAccessStatus(isStudentPaid ? 'ACTIVE' : 'LOCKED');
+            setPaymentActivatedAt(userData?.paymentActivatedAt || undefined);
 
             // Resolve candidate display name
             const storedName = userData?.name;
@@ -107,6 +133,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setRole(initialRole);
             setIsAdmin(initialRole === 'admin');
             setIsStudent(initialRole === 'admin');
+            const initialPaid = isBootstrapAdmin;
+            setIsPaid(initialPaid);
+            setPaymentStatus(initialPaid ? 'PAID' : 'UNPAID');
+            setAccessStatus(initialPaid ? 'ACTIVE' : 'LOCKED');
 
             const defaultName = currentUser.displayName || (currentUser.email ? currentUser.email.split('@')[0] : 'Candidate');
             setUserName(defaultName);
@@ -120,6 +150,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 name: defaultName,
                 email: currentUser.email || '',
                 role: initialRole,
+                paymentStatus: initialPaid ? 'PAID' : 'UNPAID',
+                accessStatus: initialPaid ? 'ACTIVE' : 'LOCKED',
                 createdAt: new Date().toISOString(),
                 photoURL: currentUser.photoURL || '',
                 mockTestsTaken: 0,
@@ -145,6 +177,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setRole(fallbackRole);
         setIsAdmin(fallbackRole === 'admin');
         setIsStudent(fallbackRole === 'admin');
+        setIsPaid(isBootstrapAdmin);
+        setPaymentStatus(isBootstrapAdmin ? 'PAID' : 'UNPAID');
+        setAccessStatus(isBootstrapAdmin ? 'ACTIVE' : 'LOCKED');
         setLoading(false);
       });
     });
@@ -160,7 +195,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, userName, userPhone, role, isStudent, loading, isAdmin, logout }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      userName, 
+      userPhone, 
+      role, 
+      isStudent, 
+      loading, 
+      isAdmin, 
+      isPaid, 
+      paymentStatus, 
+      accessStatus, 
+      paymentActivatedAt, 
+      logout 
+    }}>
       {children}
     </AuthContext.Provider>
   );

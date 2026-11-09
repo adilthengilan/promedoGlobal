@@ -42,212 +42,7 @@ export interface ImageBankItem {
   isCustom?: boolean;
 }
 
-const DEFAULT_IMAGE_ITEMS: ImageBankItem[] = [
-  {
-    id: 'case-img-101',
-    code: 'Q-IMG-101',
-    title: 'Bilateral Forearm Radiograph in a Limping Child',
-    subject: 'Orthopaedics & Trauma',
-    authority: 'DHA / SMLE Orthopaedics Core',
-    imageUrl: '/public/assets/aistudio/Screenshot_2026-10-30_at_9.46.23_AM_dd559279.png',
-    options: [
-      'Diaphyseal Aclasis (Hereditary Multiple Exostoses)',
-      'Osteogenesis Imperfecta with cortical thinning',
-      'Fibrous Dysplasia (McCune-Albright Syndrome)',
-      'Maffucci Syndrome with multiple hemangiomas'
-    ],
-    correctAnswer: 'Diaphyseal Aclasis (Hereditary Multiple Exostoses)',
-    explanation: 'Bilateral forearm radiographs showing sessile and pedunculated osteochondromas projecting away from the physeal growth plates, causing relative ulnar shortening and compensatory radial bowing.',
-    clinicalPearl: 'Autosomal dominant disorder linked to EXT1 and EXT2 mutations. The most critical complication to monitor in adulthood is malignant transformation into secondary chondrosarcoma (suspect if rapid enlargement or new deep pain).'
-  },
-  {
-    id: 'case-img-102',
-    code: 'Q-IMG-102',
-    title: '12-Lead ECG: Monomorphic Wide-Complex Tachycardia',
-    subject: 'Internal Medicine & Cardiology',
-    authority: 'HAAD / DHA Emergency Cardiology',
-    imageUrl: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Monomorphic Ventricular Tachycardia (VT)',
-      'Supraventricular Tachycardia (SVT) with aberrancy',
-      'Atrial Flutter with 2:1 conduction',
-      'Wolff-Parkinson-White antidromic tachycardia'
-    ],
-    correctAnswer: 'Monomorphic Ventricular Tachycardia (VT)',
-    explanation: 'Wide regular QRS complexes (>140 ms) with AV dissociation, fusion beats, and concordant chest lead axis pattern.',
-    clinicalPearl: 'In unstable wide-complex tachycardia with hypotension, immediate synchronized electrical cardioversion (100J) is mandatory. Never give calcium channel blockers (Verapamil) for undifferentiated wide-complex tachycardia.'
-  },
-  {
-    id: 'case-img-103',
-    code: 'Q-IMG-103',
-    title: 'Supine Chest Radiograph: Hyperlucent Hemithorax with Shift',
-    subject: 'Radiology & Imaging',
-    authority: 'ATLS 10th Ed / DHA Trauma',
-    imageUrl: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Left Tension Pneumothorax with Mediastinal Shift',
-      'Left Massive Hemothorax',
-      'Right Complete Lung Collapse',
-      'Diaphragmatic Rupture with herniation'
-    ],
-    correctAnswer: 'Left Tension Pneumothorax with Mediastinal Shift',
-    explanation: 'Hyperlucent left hemithorax devoid of bronchovascular markings, severe contralateral mediastinal and tracheal shift to the right, and depression of the ipsilateral hemidiaphragm.',
-    clinicalPearl: 'Tension pneumothorax is a clinical diagnosis. Do not await radiographic confirmation in an unstable, hypotensive patient; execute immediate needle decompression (2nd ICS midclavicular or 5th ICS anterior axillary line).'
-  },
-  {
-    id: 'case-img-104',
-    code: 'Q-IMG-104',
-    title: 'Dilated Fundoscopy: Pale Retina with Foveal Cherry-Red Spot',
-    subject: 'Ophthalmology',
-    authority: 'SMLE / OMSB Emergency Ophthalmology',
-    imageUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Central Retinal Artery Occlusion (CRAO)',
-      'Central Retinal Vein Occlusion (CRVO)',
-      'Rhegmatogenous Retinal Detachment',
-      'Age-Related Macular Degeneration'
-    ],
-    correctAnswer: 'Central Retinal Artery Occlusion (CRAO)',
-    explanation: 'Severe acute retinal ischemia causing chalky milky-white retinal edema with choroidal vascularity shining through the thin foveal center as a bright "cherry-red spot".',
-    clinicalPearl: 'An acute ocular stroke equivalent. Permanent irreversible retinal ganglion death occurs after 90-100 minutes. Immediate stroke workup (carotid Doppler, echocardiography) is required to identify the embolic origin.'
-  },
-  {
-    id: 'case-img-105',
-    code: 'Q-IMG-105',
-    title: 'Facial Vesicular Eruption: Nasal Tip Hutchinson Sign',
-    subject: 'Dermatology & Skin Lesions',
-    authority: 'DHA / MOH Dermatology Spotter',
-    imageUrl: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Herpes Zoster Ophthalmicus (Hutchinson Sign)',
-      'Facial Impetigo Contagiosa',
-      'Erysipelas of the face',
-      'Contact Allergic Dermatitis'
-    ],
-    correctAnswer: 'Herpes Zoster Ophthalmicus (Hutchinson Sign)',
-    explanation: 'Unilateral dermatomal grouped vesicles in the V1 ophthalmic branch of the trigeminal nerve extending to the tip of the nose (nasociliary branch).',
-    clinicalPearl: 'Hutchinson sign carries a 76% risk of sight-threatening ocular complications (dendritic keratitis, anterior uveitis). Start high-dose oral Valacyclovir (1000 mg TID) and obtain urgent slit-lamp evaluation.'
-  },
-  {
-    id: 'case-img-106',
-    code: 'Q-IMG-106',
-    title: 'Abdominal Radiograph: Massive Inverted U "Coffee-Bean" Loop',
-    subject: 'General Surgery & Trauma',
-    authority: 'HAAD / DHA / OMSB Surgery',
-    imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Sigmoid Volvulus ("Coffee-Bean" sign)',
-      'Cecal Volvulus ("Kidney-Bean" directed to LUQ)',
-      'Toxic Megacolon in ulcerative colitis',
-      'Acute Colonic Pseudo-Obstruction'
-    ],
-    correctAnswer: 'Sigmoid Volvulus ("Coffee-Bean" sign)',
-    explanation: 'Enormous inverted U-shaped dilated loop of colon lacking haustra, originating from the pelvis and aiming toward the right upper quadrant.',
-    clinicalPearl: 'First-line management in non-gangrenous, non-perforated patients is flexible or rigid sigmoidoscopic detorsion and rectal flatus tube insertion (effective in >80%), followed by elective resection during same stay.'
-  },
-  {
-    id: 'case-img-107',
-    code: 'Q-IMG-107',
-    title: 'Neonatal Abdominal X-Ray: Congenital "Double-Bubble" Sign',
-    subject: 'Paediatrics & Neonatology',
-    authority: 'DHA / SMLE Paediatric Surgery',
-    imageUrl: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Congenital Duodenal Atresia',
-      'Hypertrophic Pyloric Stenosis ("Single-Bubble")',
-      'Necrotizing Enterocolitis with pneumatosis',
-      'Malrotation with midgut volvulus'
-    ],
-    correctAnswer: 'Congenital Duodenal Atresia',
-    explanation: 'Two prominent upper abdominal air bubbles representing the gas-filled stomach and dilated duodenal bulb, with complete absence of distal bowel gas.',
-    clinicalPearl: 'Presents on Day 1 of life with bilious vomiting. Associated with Trisomy 21 (Down syndrome) in ~30% of cases. Pyloric stenosis presents at 3-6 weeks with non-bilious projectile vomiting and hypochloremic alkalosis.'
-  },
-  {
-    id: 'case-img-108',
-    code: 'Q-IMG-108',
-    title: 'Transvaginal Ultrasound: Adnexal "Tubal Ring" & Doppler Flare',
-    subject: 'Obstetrics & Gynaecology',
-    authority: 'DHA / HAAD Labour & Gynaecology',
-    imageUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Tubal Ectopic Pregnancy with Ring of Fire',
-      'Corpus Luteum Cyst in normal pregnancy',
-      'Ovarian Dermoid Teratoma',
-      'Hydrosalpinx with pelvic adhesions'
-    ],
-    correctAnswer: 'Tubal Ectopic Pregnancy with Ring of Fire',
-    explanation: 'Empty uterine cavity with thickened decidual endometrium and an adnexal mass with a hypervascular concentric rim on color Doppler ("ring of fire").',
-    clinicalPearl: 'Discriminatory zone for beta-hCG on TVUS is 1,500 - 2,000 mIU/mL. Methotrexate criteria: hemodynamically stable, unruptured, adnexal mass <3.5 cm, no fetal cardiac activity, baseline beta-hCG <5,000 mIU/mL.'
-  },
-  {
-    id: 'case-img-109',
-    code: 'Q-IMG-109',
-    title: 'Peripheral Blood Film: Sickle Cells & Target Codocytes',
-    subject: 'Pathology & Hematology',
-    authority: 'SMLE / MOH Hematology Core',
-    imageUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Sickle Cell Anemia (HbSS Homozygous Crisis)',
-      'Hereditary Spherocytosis',
-      'Beta-Thalassemia Major',
-      'Autoimmune Warm Hemolytic Anemia'
-    ],
-    correctAnswer: 'Sickle Cell Anemia (HbSS Homozygous Crisis)',
-    explanation: 'Elongated, rigid, crescent-shaped erythrocytes (drepanocytes), target cells, and Howell-Jolly bodies reflecting autosplenectomy from recurrent splenic microinfarcts.',
-    clinicalPearl: 'Point mutation at codon 6 of beta-globin gene: Glutamic acid substituted by Valine. In acute vaso-occlusive pain crisis, provide aggressive IV hydration, scheduled opioid analgesia, and oxygen only if SpO2 <95%.'
-  },
-  {
-    id: 'case-img-110',
-    code: 'Q-IMG-110',
-    title: 'Non-Contrast Brain CT: Biconvex Hyperdensity Abutting Fracture',
-    subject: 'Emergency & Neurosurgery',
-    authority: 'DHA / SMLE Neurosurgery Emergency',
-    imageUrl: 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Acute Epidural Hematoma (Middle Meningeal Artery)',
-      'Acute Subdural Hematoma (Bridging Veins)',
-      'Traumatic Subarachnoid Hemorrhage',
-      'Hemorrhagic Cerebral Contusion'
-    ],
-    correctAnswer: 'Acute Epidural Hematoma (Middle Meningeal Artery)',
-    explanation: 'Lens-shaped (biconvex) hyperdense extra-axial collection confined by cranial suture lines, typically following trauma to the pterion with squamous temporal fracture.',
-    clinicalPearl: 'Classic presentation: brief loss of consciousness, lucid interval, followed by sudden uncal herniation with ipsilateral fixed dilated pupil (CN III compression) and contralateral hemiparesis.'
-  },
-  {
-    id: 'case-img-111',
-    code: 'Q-IMG-111',
-    title: 'AP Neck Radiograph: Subglottic Tracheal Tapering',
-    subject: 'Paediatrics & Neonatology',
-    authority: 'HAAD / DHA Paediatric Emergency',
-    imageUrl: 'https://images.unsplash.com/photo-1530497610245-94d3c16cda28?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Viral Croup (Subglottic "Steeple Sign")',
-      'Acute Epiglottitis ("Thumbprint Sign")',
-      'Retropharyngeal Abscess',
-      'Bacterial Tracheitis'
-    ],
-    correctAnswer: 'Viral Croup (Subglottic "Steeple Sign")',
-    explanation: 'Symmetrical inverted V-shaped subglottic tracheal narrowing ("steeple sign") caused by mucosal edema in a toddler with barking seal cough and inspiratory stridor.',
-    clinicalPearl: 'Most commonly caused by Parainfluenza virus. First-line medical therapy for moderate-to-severe croup is single-dose oral or IM Dexamethasone (0.6 mg/kg) plus nebulized racemic epinephrine.'
-  },
-  {
-    id: 'case-img-112',
-    code: 'Q-IMG-112',
-    title: 'Intrapartum CTG Trace: Recurrent Late Decelerations',
-    subject: 'Obstetrics & Gynaecology',
-    authority: 'DHA / OMSB Labour Ward',
-    imageUrl: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80',
-    options: [
-      'Late Decelerations (Uteroplacental Insufficiency)',
-      'Early Decelerations (Fetal Head Compression)',
-      'Variable Decelerations (Cord Compression)',
-      'Normal Fetal Sleep Cycle'
-    ],
-    correctAnswer: 'Late Decelerations (Uteroplacental Insufficiency)',
-    explanation: 'Gradual symmetric drop in fetal heart rate with the nadir occurring AFTER the peak of the uterine contraction, signaling fetal myocardial hypoxia.',
-    clinicalPearl: 'Execute intrauterine resuscitation: left lateral decubitus positioning, discontinue oxytocin infusion, IV crystalloid bolus, maternal oxygen. If late decelerations persist, proceed to emergent delivery.'
-  }
-];
+const DEFAULT_IMAGE_ITEMS: ImageBankItem[] = [];
 
 const ITEMS_PER_PAGE = 6;
 
@@ -309,7 +104,7 @@ export default function ImageBankSection({}: ImageBankSectionProps) {
 
   // Currently active selected item
   const [activeItemId, setActiveItemId] = useState<string>(() => {
-    return allQuestions[0]?.id || 'case-img-101';
+    return allQuestions[0]?.id || '';
   });
 
   // Candidate selected option for interactive answering
@@ -640,6 +435,29 @@ export default function ImageBankSection({}: ImageBankSectionProps) {
       {/* SECTION 1: BROWSE & PRACTICE IMAGE QUESTIONS                   */}
       {/* ============================================================== */}
       {activeTab === 'browse' && (
+        allQuestions.length === 0 ? (
+          <div className="py-16 text-center border-2 border-dashed border-[#E5EEFF] rounded-3xl p-8 bg-[#EFF4FF]/30">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-[#E5EEFF] flex items-center justify-center mx-auto mb-4 text-[#3853A4] shadow-sm">
+              <Eye size={28} />
+            </div>
+            <h3 className="text-lg font-bold font-display text-[#0B1C30] mb-1">
+              No Clinical Image Cases Published
+            </h3>
+            <p className="text-sm text-[#45464D] max-w-md mx-auto mb-6">
+              There are currently no visual diagnostic cases in the image bank. You can add image-based clinical questions using the button below.
+            </p>
+            <button
+              onClick={() => {
+                setActiveTab('create');
+                setFormCode(`Q-IMG-101`);
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#3853A4] text-white text-xs font-bold shadow-md hover:bg-[#2A4080] transition-colors cursor-pointer"
+            >
+              <Plus size={16} />
+              <span>Add Image Question</span>
+            </button>
+          </div>
+        ) : (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
@@ -1032,6 +850,7 @@ export default function ImageBankSection({}: ImageBankSectionProps) {
             </button>
           </div>
         </div>
+        )
       )}
 
       {/* ============================================================== */}

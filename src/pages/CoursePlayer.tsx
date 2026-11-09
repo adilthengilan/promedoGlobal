@@ -20,37 +20,7 @@ import {
   Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { DEFAULT_LMS_CATALOG } from './Courses';
 import CourseProgressBar from '../components/CourseProgressBar';
-
-const LESSONS_LIST = [
-  {
-    moduleId: 1,
-    moduleTitle: 'Module 1: Cardiology & Internal Medicine Blueprints',
-    lessons: [
-      { id: 'l1', title: 'Cardiovascular Pearls & ECG Recall Analysis', duration: '28:45', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4' },
-      { id: 'l2', title: 'Hypertension Clinical Practice Guidelines 2026', duration: '34:10', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4' },
-      { id: 'l3', title: 'Heart Failure & Arrhythmia Prometric Cases', duration: '41:20', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4' }
-    ]
-  },
-  {
-    moduleId: 2,
-    moduleTitle: 'Module 2: Emergency Medicine, Trauma & Sepsis',
-    lessons: [
-      { id: 'l4', title: 'Airway Emergencies & Advanced Trauma Protocols', duration: '32:15', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4' },
-      { id: 'l5', title: 'Sepsis Resuscitation Bundles & Vasopressors', duration: '36:50', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4' },
-      { id: 'l6', title: 'Acute Toxicology & Antidote Flash-Recalls', duration: '25:30', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4' }
-    ]
-  },
-  {
-    moduleId: 3,
-    moduleTitle: 'Module 3: Pediatrics, Neonatology & Milestones',
-    lessons: [
-      { id: 'l7', title: 'Neonatal Resuscitation & Apgar Scoring Cases', duration: '30:00', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4' },
-      { id: 'l8', title: 'Pediatric Infectious Diseases & Vaccine Schedules', duration: '38:15', videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4' }
-    ]
-  }
-];
 
 const CoursePlayer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,18 +28,45 @@ const CoursePlayer: React.FC = () => {
   const { user } = useAuth();
 
   const [course, setCourse] = useState<any>(null);
-  const [currentLesson, setCurrentLesson] = useState<any>(LESSONS_LIST[0].lessons[0]);
-  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>(['l1']);
+  const [loading, setLoading] = useState(true);
+  const [modules, setModules] = useState<any[]>([]);
+  const [currentLesson, setCurrentLesson] = useState<any>(null);
+  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<'notes' | 'recalls' | 'discussion'>('notes');
 
   useEffect(() => {
-    const found = DEFAULT_LMS_CATALOG.find(c => c.id === id) || DEFAULT_LMS_CATALOG[0];
-    setCourse(found);
+    const fetchCourseData = async () => {
+      setLoading(true);
+      try {
+        if (!id) return;
+        const docRef = doc(db, 'courses', id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const cData = { id: docSnap.id, ...docSnap.data() };
+          setCourse(cData);
+          const cModules = Array.isArray((cData as any).modules) ? (cData as any).modules : [];
+          setModules(cModules);
+          const all = cModules.flatMap((m: any) => m.lessons || []);
+          if (all.length > 0) {
+            setCurrentLesson(all[0]);
+          }
+        } else {
+          setCourse(null);
+          setModules([]);
+        }
+      } catch (err) {
+        console.error("Error fetching course player data:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourseData();
   }, [id]);
 
-  const allLessons = LESSONS_LIST.flatMap(m => m.lessons);
-  const progressPercent = Math.round((completedLessonIds.length / allLessons.length) * 100);
+  const allLessons = modules.flatMap(m => m.lessons || []);
+  const progressPercent = allLessons.length > 0 ? Math.round((completedLessonIds.length / allLessons.length) * 100) : 0;
 
   const toggleLessonCompleted = async (lessonId: string) => {
     setCompletedLessonIds(prev => {
@@ -104,6 +101,34 @@ const CoursePlayer: React.FC = () => {
       setCurrentLesson(allLessons[currentIndex - 1]);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0B1C30] text-white flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!course || allLessons.length === 0 || !currentLesson) {
+    return (
+      <div className="min-h-screen bg-[#0B1C30] text-white flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mx-auto mb-4 text-[#3853A4]">
+          <PlayCircle size={32} />
+        </div>
+        <h2 className="text-xl font-bold mb-2">No Video Lectures Available</h2>
+        <p className="text-xs text-gray-400 max-w-md mb-6">
+          {!course ? 'The requested course does not exist.' : 'Video lectures for this track are currently being recorded by Promedo Global faculty.'}
+        </p>
+        <button
+          onClick={() => navigate('/courses')}
+          className="px-6 py-2.5 bg-[#3853A4] hover:bg-[#2F4487] text-white text-xs font-bold rounded-xl cursor-pointer"
+        >
+          Browse All Courses
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0B1C30] text-white flex flex-col">
@@ -296,13 +321,13 @@ const CoursePlayer: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                {LESSONS_LIST.map((module) => (
-                  <div key={module.moduleId} className="space-y-1.5">
+                {modules.map((module: any, mIdx: number) => (
+                  <div key={module.moduleId || mIdx} className="space-y-1.5">
                     <h4 className="text-[11px] font-black text-gray-400 px-2 uppercase tracking-wide">
-                      {module.moduleTitle}
+                      {module.moduleTitle || module.title || `Module ${mIdx + 1}`}
                     </h4>
 
-                    {module.lessons.map((lesson) => {
+                    {(module.lessons || []).map((lesson: any) => {
                       const isCurrent = currentLesson.id === lesson.id;
                       const isDone = completedLessonIds.includes(lesson.id);
 

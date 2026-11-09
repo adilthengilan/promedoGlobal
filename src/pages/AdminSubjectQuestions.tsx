@@ -8,6 +8,8 @@ import { useNavigate } from 'react-router-dom';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, getDocs, doc, setDoc, addDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { uploadQuestionImage, validateQuestionImage } from '../lib/cloudinaryService';
+import QuestionImage from '../components/QuestionImage';
 
 interface Subject {
   id: string; // Document ID (typically the subject name or slugified)
@@ -23,6 +25,7 @@ interface Question {
   correctAnswer: number;
   explanation: string;
   imageUrl?: string;
+  imagePublicId?: string;
   createdAt?: string;
 }
 
@@ -43,6 +46,7 @@ export default function AdminSubjectQuestions() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [submittingQuestion, setSubmittingQuestion] = useState(false);
   const [submittingSubject, setSubmittingSubject] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [searchText, setSearchText] = useState('');
@@ -63,7 +67,8 @@ export default function AdminSubjectQuestions() {
     optionD: '',
     correctAnswer: 0, // 0 = A, 1 = B, 2 = C, 3 = D
     explanation: '',
-    imageUrl: ''
+    imageUrl: '',
+    imagePublicId: ''
   });
 
   // Additional CRUD States
@@ -80,22 +85,38 @@ export default function AdminSubjectQuestions() {
   const [questionToDelete, setQuestionToDelete] = useState<{ id: string, text: string } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // File upload handler for Question Image (Optional)
-  const handleQuestionImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // File upload handler for Question Image via Cloudinary
+  const handleQuestionImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 8 * 1024 * 1024) {
-      setErrorMessage("Image size must be under 8MB.");
+
+    const validation = validateQuestionImage(file);
+    if (!validation.valid) {
+      setErrorMessage(validation.error || 'Invalid image file.');
       setTimeout(() => setErrorMessage(null), 4000);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      if (typeof ev.target?.result === 'string') {
-        setQuestionForm(prev => ({ ...prev, imageUrl: ev.target!.result as string }));
+
+    setUploadingImage(true);
+    try {
+      const result = await uploadQuestionImage(file);
+      setQuestionForm(prev => ({
+        ...prev,
+        imageUrl: result.imageUrl,
+        imagePublicId: result.publicId
+      }));
+      setSuccessMessage("Image uploaded successfully to Cloudinary!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error("Cloudinary upload failed:", err);
+      setErrorMessage(err.message || 'Image upload failed. Please try again.');
+      setTimeout(() => setErrorMessage(null), 4000);
+    } finally {
+      setUploadingImage(false);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
       }
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   // Fetch all subjects on mount with LocalStorage failover
@@ -361,6 +382,7 @@ export default function AdminSubjectQuestions() {
       correctAnswer: Number(correctAnswer),
       explanation: explanation.trim(),
       imageUrl: questionForm.imageUrl || '',
+      imagePublicId: questionForm.imagePublicId || '',
       createdAt: new Date().toISOString()
     };
 
@@ -385,6 +407,7 @@ export default function AdminSubjectQuestions() {
         correctAnswer: questionData.correctAnswer,
         explanation: questionData.explanation,
         imageUrl: questionData.imageUrl || '',
+        imagePublicId: questionData.imagePublicId || '',
         createdAt: questionData.createdAt
       }, { merge: true });
 
@@ -403,7 +426,8 @@ export default function AdminSubjectQuestions() {
         optionD: '',
         correctAnswer: 0,
         explanation: '',
-        imageUrl: ''
+        imageUrl: '',
+        imagePublicId: ''
       });
 
       if (questionInputRef.current) {
@@ -433,7 +457,8 @@ export default function AdminSubjectQuestions() {
       optionD: q.options[3] || '',
       correctAnswer: q.correctAnswer,
       explanation: q.explanation || '',
-      imageUrl: q.imageUrl || ''
+      imageUrl: q.imageUrl || '',
+      imagePublicId: q.imagePublicId || ''
     });
     if (questionInputRef.current) {
       questionInputRef.current.focus();
@@ -933,12 +958,18 @@ export default function AdminSubjectQuestions() {
                     <input 
                       type="file" 
                       ref={imageInputRef} 
-                      accept="image/*" 
+                      accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" 
                       onChange={handleQuestionImageUpload} 
                       className="hidden" 
                     />
 
-                    {!questionForm.imageUrl ? (
+                    {uploadingImage ? (
+                      <div className="border-2 border-dashed border-teal-400 bg-teal-50/40 rounded-xl p-6 text-center transition-all flex flex-col items-center justify-center space-y-2">
+                        <Loader2 className="animate-spin text-teal-600" size={24} />
+                        <span className="text-xs font-bold text-teal-900">Uploading media to Cloudinary CDN...</span>
+                        <span className="text-[10px] text-teal-700">Generating secure HTTPS asset URL</span>
+                      </div>
+                    ) : !questionForm.imageUrl ? (
                       <div 
                         onClick={() => imageInputRef.current?.click()}
                         className="border-2 border-dashed border-gray-200 hover:border-teal-500 bg-gray-50/50 hover:bg-teal-50/20 rounded-xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center space-y-1 group"
@@ -947,21 +978,23 @@ export default function AdminSubjectQuestions() {
                           <Upload size={16} />
                         </div>
                         <div>
-                          <span className="text-xs font-bold text-gray-700 block">Click to upload clinical media (Optional)</span>
+                          <span className="text-xs font-bold text-gray-700 block">Click to upload clinical media via Cloudinary</span>
                           <span className="text-[10px] text-gray-400">PNG, JPG, WebP up to 8MB</span>
                         </div>
                       </div>
                     ) : (
-                      <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-900 group max-w-sm">
-                        <img 
-                          src={questionForm.imageUrl} 
-                          alt="Question reference" 
-                          className="max-h-48 w-full object-contain p-2"
-                        />
-                        <div className="p-2.5 bg-white border-t border-gray-100 flex items-center justify-between text-xs">
-                          <span className="text-teal-700 font-bold flex items-center gap-1">
-                            <CheckCircle2 size={13} />
-                            <span>Image Attached</span>
+                      <div className="space-y-2 max-w-md">
+                        <div className="rounded-xl overflow-hidden border border-gray-200 bg-slate-900/5 p-2">
+                          <QuestionImage 
+                            imageUrl={questionForm.imageUrl} 
+                            altText="Question clinical reference visual"
+                            className="max-h-52 w-full object-contain"
+                          />
+                        </div>
+                        <div className="p-2.5 bg-white border border-gray-200 rounded-xl flex items-center justify-between text-xs">
+                          <span className="text-teal-700 font-bold flex items-center gap-1.5">
+                            <CheckCircle2 size={14} className="text-teal-600" />
+                            <span>Cloudinary Asset Attached</span>
                           </span>
                           <div className="flex items-center gap-3">
                             <button
@@ -969,11 +1002,11 @@ export default function AdminSubjectQuestions() {
                               onClick={() => imageInputRef.current?.click()}
                               className="text-brand-blue font-bold hover:underline cursor-pointer"
                             >
-                              Replace
+                              Replace Image
                             </button>
                             <button
                               type="button"
-                              onClick={() => setQuestionForm(prev => ({ ...prev, imageUrl: '' }))}
+                              onClick={() => setQuestionForm(prev => ({ ...prev, imageUrl: '', imagePublicId: '' }))}
                               className="text-rose-600 font-bold hover:underline cursor-pointer"
                             >
                               Remove
@@ -1196,8 +1229,12 @@ export default function AdminSubjectQuestions() {
                             <div className="space-y-2 flex-1 min-w-0">
                               <p className="text-xs font-bold text-gray-800 line-clamp-3">{q.text}</p>
                               {q.imageUrl && (
-                                <div className="rounded-lg overflow-hidden max-h-20 max-w-[120px] bg-gray-900 border border-gray-100">
-                                  <img src={q.imageUrl} alt="Case visual" className="max-h-20 object-contain w-full" />
+                                <div className="max-w-[160px] rounded-lg overflow-hidden border border-gray-200">
+                                  <QuestionImage 
+                                    imageUrl={q.imageUrl} 
+                                    altText={q.text} 
+                                    className="max-h-24 w-full object-contain"
+                                  />
                                 </div>
                               )}
                               <div className="flex flex-wrap gap-2">
