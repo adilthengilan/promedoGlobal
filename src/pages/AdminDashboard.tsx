@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight, Menu, Moon, Sun, ChevronDown, ChevronRight, Minus, TrendingUp, TrendingDown, Layers, LayoutGrid, SlidersHorizontal, Settings, Activity, Send, Inbox } from 'lucide-react';
+import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight, Menu, Moon, Sun, ChevronDown, ChevronRight, Minus, TrendingUp, TrendingDown, Layers, LayoutGrid, SlidersHorizontal, Settings, Activity, Send, Inbox, Eye, EyeOff, Lock, Unlock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ExamGeneratorModal } from '../components/ExamGeneratorModal';
@@ -975,6 +975,48 @@ const AdminDashboard = () => {
       id,
       title: title || 'this course'
     });
+  };
+
+  const handleToggleMocktestListed = async (id: string, currentListed?: boolean) => {
+    const nextListed = currentListed === false ? true : false;
+    try {
+      try {
+        await updateDoc(doc(db, 'mocktests', id), { isListed: nextListed });
+      } catch (e) {
+        console.warn("Firestore update mocktest isListed error:", e);
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem('local_mocktests') || '[]');
+        const updated = local.map((m: any) => m.id === id ? { ...m, isListed: nextListed } : m);
+        localStorage.setItem('local_mocktests', JSON.stringify(updated));
+      } catch {}
+      setMocktests(prev => prev.map(m => m.id === id ? { ...m, isListed: nextListed } : m));
+      showFeedback(`Mock test marked as ${nextListed ? 'Listed (Visible to students)' : 'Unlisted (Hidden from students)'}.`, "success");
+    } catch (err) {
+      console.error("Error toggling mocktest listed status:", err);
+      showFeedback("Failed to update listing status.", "error");
+    }
+  };
+
+  const handleToggleMocktestPaid = async (id: string, currentPaid?: boolean) => {
+    const nextPaid = !currentPaid;
+    try {
+      try {
+        await updateDoc(doc(db, 'mocktests', id), { isPaid: nextPaid });
+      } catch (e) {
+        console.warn("Firestore update mocktest isPaid error:", e);
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem('local_mocktests') || '[]');
+        const updated = local.map((m: any) => m.id === id ? { ...m, isPaid: nextPaid } : m);
+        localStorage.setItem('local_mocktests', JSON.stringify(updated));
+      } catch {}
+      setMocktests(prev => prev.map(m => m.id === id ? { ...m, isPaid: nextPaid } : m));
+      showFeedback(`Mock test switched to ${nextPaid ? 'Paid (Locked for unpaid users)' : 'Free (Open for all users)'}.`, "success");
+    } catch (err) {
+      console.error("Error toggling mocktest payment status:", err);
+      showFeedback("Failed to update payment status.", "error");
+    }
   };
 
   const handleDeleteMocktest = (id: string, title?: string) => {
@@ -3665,42 +3707,83 @@ const AdminDashboard = () => {
                       {activeTab === 'mocktests' && mocktests.length === 0 && (
                         <tr><td colSpan={3} className="py-20 text-center text-gray-400">No mock tests found.</td></tr>
                       )}
-                      {activeTab === 'mocktests' && mocktests.map(test => (
-                        <tr key={test.id} className="group">
-                          <td className="py-6">
-                            <div>
-                              <p className="font-bold">{test.title}</p>
-                              <p className="text-xs text-gray-400 uppercase">{test.exam} Exam</p>
-                            </div>
-                          </td>
+                      {activeTab === 'mocktests' && mocktests.map(test => {
+                        const isListed = test.isListed !== false;
+                        const isPaid = !!test.isPaid;
+                        const qCount = Array.isArray(test.questions) ? test.questions.length : (typeof test.questions === 'number' ? test.questions : (test.questions?.length || 0));
+
+                        return (
+                        <tr key={test.id} className="group hover:bg-gray-50/60 transition-colors">
                           <td className="py-6">
                             <div className="space-y-1">
-                              <p className="font-bold text-brand-blue">{Array.isArray(test.questions) ? test.questions.length : (typeof test.questions === 'number' ? test.questions : (test.questions?.length || 0))} Qs / {test.timeLimit} Min</p>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${test.isPaid ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}>
-                                {test.isPaid ? `Paid (${test.price || '$49'})` : 'Free'}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <p className="font-extrabold text-gray-900 text-sm">{test.title}</p>
+                                <span className="text-[10px] text-gray-500 font-bold uppercase bg-gray-100 px-2 py-0.5 rounded-md">
+                                  {test.exam} Exam
+                                </span>
+                              </div>
+                              <p className="text-xs text-gray-500 font-medium line-clamp-1">{test.description || 'Prometric exam simulator'}</p>
                             </div>
                           </td>
                           <td className="py-6">
-                            <div className="flex gap-2">
+                            <div className="space-y-2">
+                              <p className="font-bold text-brand-blue text-xs">{qCount} Qs / {test.timeLimit} Min</p>
+                              
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {/* Listed / Unlisted Toggle Button */}
+                                <button 
+                                  type="button"
+                                  onClick={() => handleToggleMocktestListed(test.id, isListed)}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer border ${
+                                    isListed 
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' 
+                                      : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  }`}
+                                  title={isListed ? 'Currently Listed (Visible on student catalog) - Click to Unlist' : 'Currently Unlisted (Hidden) - Click to List'}
+                                >
+                                  {isListed ? <Eye size={12} /> : <EyeOff size={12} />}
+                                  <span>{isListed ? 'Listed' : 'Unlisted'}</span>
+                                </button>
+
+                                {/* Paid / Free Toggle Button */}
+                                <button 
+                                  type="button"
+                                  onClick={() => handleToggleMocktestPaid(test.id, isPaid)}
+                                  className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1 cursor-pointer border ${
+                                    isPaid 
+                                      ? 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100' 
+                                      : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                  }`}
+                                  title={isPaid ? 'Currently Paid (Requires student Pro access) - Click to make Free' : 'Currently Free (Open for all students) - Click to make Paid'}
+                                >
+                                  {isPaid ? <Lock size={12} /> : <Unlock size={12} />}
+                                  <span>{isPaid ? `Paid (${test.price || '$49'})` : 'Free'}</span>
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-6">
+                            <div className="flex items-center gap-2">
                               <button 
                                 onClick={() => navigate(`/adminlandingpage/mocktest/edit/${test.id}`)}
-                                className="p-2 rounded-lg bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white transition-all flex items-center gap-2 text-xs font-bold"
+                                className="p-2 rounded-xl bg-blue-50 text-brand-blue hover:bg-brand-blue hover:text-white transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer"
                                 title="Edit Test & Questions"
                               >
-                                <Edit2 size={16} />
-                                Edit Test & Questions
+                                <Edit2 size={15} />
+                                <span>Edit</span>
                               </button>
                               <button 
                                 onClick={() => handleDeleteMocktest(test.id, test.title)}
-                                className="p-2 rounded-lg bg-gray-50 text-gray-400 hover:text-red-500 transition-colors"
+                                className="p-2 rounded-xl bg-gray-50 text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                                title="Delete Test"
                               >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
 
                       {activeTab === 'sales' && sales.length === 0 && (
                         <tr><td colSpan={3} className="py-20 text-center text-gray-400">No sales records found.</td></tr>

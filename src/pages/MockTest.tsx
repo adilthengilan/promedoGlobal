@@ -7,9 +7,10 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { recordMockAttempt } from '../lib/stats';
 import QuestionImage from '../components/QuestionImage';
+import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
 
 const MockTest = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isPaid } = useAuth();
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -216,6 +217,31 @@ const MockTest = () => {
         <h1 className="text-3xl mb-4 font-bold">Paper Missing</h1>
         <p className="text-gray-500 mb-8">We couldn't locate the mock test you requested.</p>
         <Link to="/" className="btn-primary px-8 py-3">Return to Hub</Link>
+      </div>
+    );
+  }
+
+  // Check if test is unlisted: unlisted tests cannot be accessed by regular students
+  if (test.isListed === false && !isAdmin) {
+    return (
+      <div className="min-h-screen pt-32 text-center max-w-xl mx-auto px-4">
+        <h1 className="text-3xl mb-4 font-bold text-[#0B1C30]">Exam Not Available</h1>
+        <p className="text-gray-500 mb-8">This mock test is currently unlisted by administrators.</p>
+        <Link to="/mocktests" className="btn-primary px-8 py-3">View Available Mock Tests</Link>
+      </div>
+    );
+  }
+
+  // Check if test is paid: unpaid users cannot access paid tests
+  if (test.isPaid && !isAdmin && !isPaid) {
+    return (
+      <div className="min-h-screen pt-20 pb-20 px-4 bg-gray-50 flex items-center justify-center">
+        <div className="w-full max-w-2xl">
+          <PremiumUpgradeScreen 
+            moduleName={`Mock Test: ${test.title}`}
+            onBack={() => navigate('/mocktests')}
+          />
+        </div>
       </div>
     );
   }

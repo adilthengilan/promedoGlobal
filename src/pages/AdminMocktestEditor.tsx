@@ -16,7 +16,11 @@ import {
   Clock,
   Award,
   DollarSign,
-  X
+  X,
+  Eye,
+  EyeOff,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -46,6 +50,7 @@ const AdminMocktestEditor = () => {
     exam: 'dha',
     isActive: true,
     isPaid: false,
+    isListed: true,
     price: ''
   });
 
@@ -100,6 +105,7 @@ const AdminMocktestEditor = () => {
               exam: data.exam || 'dha',
               isActive: data.isActive !== undefined ? data.isActive : true,
               isPaid: data.isPaid !== undefined ? data.isPaid : false,
+              isListed: data.isListed !== undefined ? data.isListed : true,
               price: data.price || ''
             });
             if (data.questions && data.questions.length > 0) {
@@ -900,6 +906,53 @@ const AdminMocktestEditor = () => {
                           className="w-full px-3.5 py-2.5 bg-white rounded-xl border border-gray-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none font-bold text-gray-800 text-sm transition-all"
                         />
                       </div>
+                    </div>
+
+                    {/* Catalog Listing Status */}
+                    <div className="sm:col-span-2 space-y-2.5 p-4 rounded-xl bg-gray-50 border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                          Catalog Visibility (Student Side)
+                        </label>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                          testData.isListed !== false
+                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-100 text-amber-700 border border-amber-200'
+                        }`}>
+                          {testData.isListed !== false ? 'Listed on User Side' : 'Unlisted / Hidden'}
+                        </span>
+                      </div>
+                      <div className="flex gap-2.5">
+                        <button 
+                          type="button"
+                          onClick={() => { setTestData({...testData, isListed: true}); setIsDirty(true); }}
+                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            testData.isListed !== false 
+                              ? 'bg-emerald-600 text-white shadow-2xs' 
+                              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                          }`}
+                        >
+                          <Eye size={14} />
+                          <span>Listed (Visible)</span>
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => { setTestData({...testData, isListed: false}); setIsDirty(true); }}
+                          className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                            testData.isListed === false 
+                              ? 'bg-amber-600 text-white shadow-2xs' 
+                              : 'bg-white text-gray-600 border border-gray-300 hover:bg-gray-100'
+                          }`}
+                        >
+                          <EyeOff size={14} />
+                          <span>Unlisted (Hidden)</span>
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-gray-500">
+                        {testData.isListed !== false
+                          ? 'This mock test will appear on the public and student catalog.'
+                          : 'This mock test is unlisted and will not be displayed on the student catalog.'}
+                      </p>
                     </div>
 
                     {/* Access Pricing */}

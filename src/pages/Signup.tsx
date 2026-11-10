@@ -4,7 +4,9 @@ import {
   createUserWithEmailAndPassword, 
   signInWithPopup, 
   GoogleAuthProvider,
-  updateProfile
+  updateProfile,
+  setPersistence,
+  inMemoryPersistence
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType } from '../lib/firebase';
@@ -199,7 +201,20 @@ const Signup: React.FC = () => {
     } catch (_) {}
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+      } catch (authErr: any) {
+        const msg = (authErr?.message || String(authErr)).toLowerCase();
+        if (msg.includes('disk') || msg.includes('indexeddb') || msg.includes('internal-error') || msg.includes('file_error_no_space') || msg.includes('quota')) {
+          console.warn('[Auth] Registration storage quota issue caught, retrying with inMemoryPersistence...');
+          await setPersistence(auth, inMemoryPersistence);
+          userCredential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
+        } else {
+          throw authErr;
+        }
+      }
+
       const isBootstrapAdmin = normalizedEmail === 'live.rafick@gmail.com';
       const role = isBootstrapAdmin ? 'admin' : 'student';
       const now = new Date().toISOString();

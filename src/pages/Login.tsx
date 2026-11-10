@@ -4,7 +4,9 @@ import {
   signInWithEmailAndPassword, 
   signInWithPopup, 
   GoogleAuthProvider,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  setPersistence,
+  inMemoryPersistence
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
@@ -53,7 +55,20 @@ const Login: React.FC = () => {
     setInfoMessage('');
     setLoading(true);
     try {
-      const userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      let userCred;
+      try {
+        userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+      } catch (authErr: any) {
+        const msg = (authErr?.message || String(authErr)).toLowerCase();
+        if (msg.includes('disk') || msg.includes('indexeddb') || msg.includes('internal-error') || msg.includes('file_error_no_space') || msg.includes('quota')) {
+          console.warn('[Auth] Storage quota issue encountered, retrying with inMemoryPersistence...');
+          await setPersistence(auth, inMemoryPersistence);
+          userCred = await signInWithEmailAndPassword(auth, email.trim(), password);
+        } else {
+          throw authErr;
+        }
+      }
+
       let candidatePhone = '';
       let candidateName = email.split('@')[0];
       let candidateExam = 'DHA (Dubai Health Authority)';
@@ -101,7 +116,12 @@ const Login: React.FC = () => {
       });
       navigate(redirectTarget);
     } catch (err: any) {
-      console.error('Sign-in error:', err);
+      const errMsg = (err?.message || String(err)).toLowerCase();
+      if (!errMsg.includes('disk') && !errMsg.includes('indexeddb') && !errMsg.includes('file_error_no_space')) {
+        console.error('Sign-in error:', err);
+      } else {
+        console.warn('Sign-in storage constraint:', err);
+      }
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         setError('Invalid email or password. If you have not created an email/password account yet, please sign up or click "Forgot Password" to set a password.');
       } else if (err.code === 'auth/too-many-requests') {
@@ -121,7 +141,19 @@ const Login: React.FC = () => {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, provider);
+      let result;
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (gErr: any) {
+        const gMsg = (gErr?.message || String(gErr)).toLowerCase();
+        if (gMsg.includes('disk') || gMsg.includes('indexeddb') || gMsg.includes('internal-error') || gMsg.includes('quota')) {
+          console.warn('[Auth] Google sign-in storage quota issue caught, retrying with inMemoryPersistence...');
+          await setPersistence(auth, inMemoryPersistence);
+          result = await signInWithPopup(auth, provider);
+        } else {
+          throw gErr;
+        }
+      }
       const user = result.user;
 
       if (user) {

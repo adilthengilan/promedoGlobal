@@ -52,7 +52,9 @@ export interface LmsMockTest {
   questionCount?: number;
   questions?: any[];
   isFree?: boolean;
-  price?: number;
+  isPaid?: boolean;
+  isListed?: boolean;
+  price?: any;
   status?: string;
   createdAt?: any;
   updatedAt?: any;
@@ -276,6 +278,37 @@ export function subscribeToMockTests(
       if (onError) onError(error);
     }
   );
+}
+
+/**
+ * Update mock test listing status (listed / unlisted).
+ */
+export async function updateMockTestListing(id: string, isListed: boolean): Promise<void> {
+  const path = `mocktests/${id}`;
+  try {
+    await updateDoc(doc(db, 'mocktests', id), {
+      isListed,
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+/**
+ * Update mock test pricing status (paid / free).
+ */
+export async function updateMockTestPricing(id: string, isPaid: boolean, price?: string | number): Promise<void> {
+  const path = `mocktests/${id}`;
+  try {
+    await updateDoc(doc(db, 'mocktests', id), {
+      isPaid,
+      ...(price !== undefined ? { price } : {}),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
 }
 
 /**

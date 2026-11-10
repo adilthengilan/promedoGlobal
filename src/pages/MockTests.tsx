@@ -32,12 +32,13 @@ import { motion, AnimatePresence } from 'motion/react';
 import { COUNTRY_CODES, parsePhoneWithCountryCode } from '../data/countryCodes';
 import { CountryCodeSelect } from '../components/CountryCodeSelect';
 import { recordCandidateLogin, EXAM_OPTIONS } from '../lib/userLogins';
+import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
 
 const DEFAULT_MOCKTESTS: any[] = [];
 const DEFAULT_ADMIN_ADS: any[] = [];
 
 const MockTests = () => {
-  const { user } = useAuth();
+  const { user, isAdmin, isPaid } = useAuth();
   const navigate = useNavigate();
 
   const [mocktests, setMocktests] = useState<any[]>([]);
@@ -51,6 +52,8 @@ const MockTests = () => {
 
   // Registration modal state
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [blockedPaidTest, setBlockedPaidTest] = useState<any>(null);
   const [selectedTestForRegistration, setSelectedTestForRegistration] = useState<any>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState('+971');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -119,6 +122,13 @@ const MockTests = () => {
   };
 
   const handleStartMockClick = (test: any) => {
+    // Paid mock tests can only be taken by paid users or admins
+    if (test.isPaid && !isAdmin && !isPaid) {
+      setBlockedPaidTest(test);
+      setShowUpgradeModal(true);
+      return;
+    }
+
     setSelectedTestForRegistration(test);
     const auth = (test.authority || test.category || test.exam || test.title || '').toLowerCase();
     let defaultExamOption = 'DHA (Dubai Health Authority)';
@@ -219,6 +229,9 @@ const MockTests = () => {
   };
 
   const filteredMocktests = mocktests.filter(test => {
+    // Only listed mock tests show on student side; admins can preview all
+    if (!isAdmin && test.isListed === false) return false;
+
     const matchesSearch = (test.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (test.category || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (test.description || '').toLowerCase().includes(searchQuery.toLowerCase());
@@ -324,17 +337,30 @@ const MockTests = () => {
                         {test.authority || 'PROMETRIC'}
                       </span>
 
-                      {isComingSoon ? (
-                        <span className="px-3 py-1 bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl flex items-center gap-1 shadow-sm">
-                          <ShieldAlert size={12} />
-                          Coming Soon
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl flex items-center gap-1 shadow-sm">
-                          <Sparkles size={12} />
-                          Free Mock Test
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {isAdmin && test.isListed === false && (
+                          <span className="px-2.5 py-1 bg-gray-200 text-gray-700 font-extrabold text-[9px] uppercase tracking-wider rounded-xl">
+                            Unlisted
+                          </span>
+                        )}
+
+                        {isComingSoon ? (
+                          <span className="px-3 py-1 bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl flex items-center gap-1 shadow-sm">
+                            <ShieldAlert size={12} />
+                            Coming Soon
+                          </span>
+                        ) : test.isPaid ? (
+                          <span className="px-3 py-1 bg-amber-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl flex items-center gap-1 shadow-sm">
+                            <Lock size={12} />
+                            PRO / Paid Test
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-emerald-500 text-white font-black text-[10px] uppercase tracking-wider rounded-xl flex items-center gap-1 shadow-sm">
+                            <Sparkles size={12} />
+                            Free Mock Test
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <h3 className="font-extrabold text-[#0B1C30] text-base leading-snug mb-3">
@@ -387,13 +413,22 @@ const MockTests = () => {
                           <span>Request Email Alert</span>
                         </button>
                       </div>
+                    ) : test.isPaid && !isAdmin && !isPaid ? (
+                      <button
+                        id={`btn-launch-mock-${test.id}`}
+                        onClick={() => handleStartMockClick(test)}
+                        className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-black text-xs shadow-md shadow-amber-500/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group"
+                      >
+                        <Lock size={14} />
+                        <span>Unlock with Pro (Paid Test)</span>
+                      </button>
                     ) : (
                       <button
                         id={`btn-launch-mock-${test.id}`}
                         onClick={() => handleStartMockClick(test)}
                         className="w-full py-3.5 bg-[#3853A4] hover:bg-[#2b4083] text-white rounded-2xl font-black text-xs shadow-md shadow-[#3853A4]/20 hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer group"
                       >
-                        <span>Start Your Mock Test</span>
+                        <span>{test.isPaid ? 'Start Pro Mock Test' : 'Start Free Mock Test'}</span>
                         <ArrowRight size={14} />
                       </button>
                     )}
@@ -599,6 +634,30 @@ const MockTests = () => {
                   <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+
+        {/* UPGRADE MODAL FOR PAID TESTS */}
+        {showUpgradeModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-2xl my-8"
+            >
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+              <PremiumUpgradeScreen 
+                moduleName={`Mock Test: ${blockedPaidTest?.title || 'Premium Simulator'}`}
+                onBack={() => setShowUpgradeModal(false)}
+                inline
+              />
             </motion.div>
           </div>
         )}

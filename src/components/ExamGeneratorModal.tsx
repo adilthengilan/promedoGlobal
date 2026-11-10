@@ -25,7 +25,9 @@ import {
   CheckCheck, 
   RotateCcw,
   Percent,
-  ListOrdered
+  ListOrdered,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, getDocs, addDoc } from 'firebase/firestore';
@@ -84,6 +86,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
   const [targetDistributeTotal, setTargetDistributeTotal] = useState<number>(80);
   const [durationMinutes, setDurationMinutes] = useState<number>(120);
   const [passingScore, setPassingScore] = useState<number>(60);
+  const [isListed, setIsListed] = useState<boolean>(true);
   const [isPaid, setIsPaid] = useState<boolean>(false);
   const [price, setPrice] = useState<string>('49');
   const [description, setDescription] = useState('');
@@ -496,6 +499,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
         passingScore: passingScore || 60,
         passScore: passingScore || 60,
         isActive: true,
+        isListed: isListed,
         isPaid: isPaid,
         price: isPaid ? (price || '49') : '0',
         questions: finalQuestions,
@@ -729,10 +733,10 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
                       />
                     </div>
 
-                    <div className="grid sm:grid-cols-3 gap-4">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <label className="text-[10px] font-extrabold uppercase text-gray-500 block mb-1 flex items-center gap-1">
-                          <Clock size={12} /> Duration (Minutes)
+                          <Clock size={12} /> Duration (Mins)
                         </label>
                         <input 
                           type="number"
@@ -741,13 +745,13 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
                           max={360}
                           value={durationMinutes}
                           onChange={e => setDurationMinutes(Number(e.target.value))}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-brand-blue"
+                          className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-brand-blue"
                         />
                       </div>
 
                       <div>
                         <label className="text-[10px] font-extrabold uppercase text-gray-500 block mb-1 flex items-center gap-1">
-                          <Award size={12} /> Passing Score (%)
+                          <Award size={12} /> Pass Score (%)
                         </label>
                         <input 
                           type="number"
@@ -756,13 +760,33 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
                           max={100}
                           value={passingScore}
                           onChange={e => setPassingScore(Number(e.target.value))}
-                          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-brand-blue"
+                          className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-xs font-bold outline-none focus:border-brand-blue"
                         />
                       </div>
 
                       <div>
                         <label className="text-[10px] font-extrabold uppercase text-gray-500 block mb-1 flex items-center gap-1">
-                          <DollarSign size={12} /> Access Type
+                          {isListed ? <Eye size={12} className="text-emerald-600" /> : <EyeOff size={12} className="text-gray-400" />}
+                          Visibility
+                        </label>
+                        <div className="flex items-center gap-1.5 pt-1">
+                          <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
+                            <input 
+                              type="checkbox"
+                              checked={isListed}
+                              onChange={e => setIsListed(e.target.checked)}
+                              className="w-4 h-4 rounded text-brand-blue focus:ring-brand-blue"
+                            />
+                            <span className={isListed ? 'text-emerald-700' : 'text-gray-500'}>
+                              {isListed ? 'Listed' : 'Unlisted'}
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-extrabold uppercase text-gray-500 block mb-1 flex items-center gap-1">
+                          <DollarSign size={12} /> Access Model
                         </label>
                         <div className="flex items-center gap-2 pt-1">
                           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700">
@@ -772,7 +796,9 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
                               onChange={e => setIsPaid(e.target.checked)}
                               className="w-4 h-4 rounded text-brand-blue focus:ring-brand-blue"
                             />
-                            Is Paid Exam
+                            <span className={isPaid ? 'text-amber-700' : 'text-emerald-700'}>
+                              {isPaid ? 'Paid' : 'Free'}
+                            </span>
                           </label>
                           {isPaid && (
                             <input 
@@ -780,7 +806,7 @@ export const ExamGeneratorModal: React.FC<ExamGeneratorModalProps> = ({
                               value={price}
                               onChange={e => setPrice(e.target.value)}
                               placeholder="$49"
-                              className="w-20 px-2 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-brand-blue"
+                              className="w-16 px-2 py-1 bg-white border border-gray-200 rounded-lg text-xs font-bold outline-none focus:border-brand-blue"
                             />
                           )}
                         </div>

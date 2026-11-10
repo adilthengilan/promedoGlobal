@@ -1,5 +1,11 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { 
+  initializeAuth, 
+  getAuth, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence 
+} from "firebase/auth";
 import { initializeFirestore, getFirestore, memoryLocalCache } from "firebase/firestore";
 
 import rawFirebaseConfig from "../../firebase-applet-config.json";
@@ -23,7 +29,22 @@ try {
   app = { name: '[DEFAULT]' } as any;
 }
 
-export const auth = getAuth(app);
+// Initialize Auth with localStorage & in-memory persistence only.
+// This completely avoids IndexedDB backing store leveldb exhaustion (FILE_ERROR_NO_SPACE / full disk error).
+let authInstance: any;
+try {
+  authInstance = initializeAuth(app, {
+    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
+  });
+} catch {
+  try {
+    authInstance = getAuth(app);
+  } catch {
+    authInstance = getAuth();
+  }
+}
+
+export const auth = authInstance;
 
 // Use in-memory cache to prevent IndexedDB leveldb storage exhaustion (FILE_ERROR_NO_SPACE)
 // and force long polling with shorter timeout to avoid proxy drops

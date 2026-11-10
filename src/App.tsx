@@ -60,13 +60,13 @@ function AppContent() {
           <Route path="/course/:id" element={<PaidAccessGuard moduleName="Courses"><CourseDetail /></PaidAccessGuard>} />
           <Route path="/player/:id" element={<PaidAccessGuard moduleName="Courses"><CoursePlayer /></PaidAccessGuard>} />
 
-          {/* Module 2: Mock Tests (Requires PAID status) */}
-          <Route path="/mocktests" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
-          <Route path="/mock-tests" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
-          <Route path="/mock-tests-list" element={<PaidAccessGuard moduleName="Mock Tests"><MockTests /></PaidAccessGuard>} />
-          <Route path="/mock-test/:id?" element={<PaidAccessGuard moduleName="Mock Tests"><MockTest /></PaidAccessGuard>} />
-          <Route path="/mock-test-intro" element={<PaidAccessGuard moduleName="Mock Tests"><MockTestIntro /></PaidAccessGuard>} />
-          <Route path="/exam-demo" element={<PaidAccessGuard moduleName="Mock Tests"><ExamDemo /></PaidAccessGuard>} />
+          {/* Mock Tests Catalog (Listed tests visible to all; paid tests protected individually) */}
+          <Route path="/mocktests" element={<MockTests />} />
+          <Route path="/mock-tests" element={<MockTests />} />
+          <Route path="/mock-tests-list" element={<MockTests />} />
+          <Route path="/mock-test/:id?" element={<MockTest />} />
+          <Route path="/mock-test-intro" element={<MockTestIntro />} />
+          <Route path="/exam-demo" element={<ExamDemo />} />
 
           {/* Module 3: Practice (Requires PAID status) */}
           <Route path="/student/subject/:subjectId" element={<PaidAccessGuard moduleName="Practice"><SubjectPractice /></PaidAccessGuard>} />

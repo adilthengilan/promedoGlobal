@@ -78,8 +78,11 @@ const Dashboard = () => {
   const [availableMocktests, setAvailableMocktests] = useState<any[]>([]);
   const { activeSections: activeSimulatorSections } = usePortalSections('mocktests');
 
-  const displayedMocktests = activeSimulatorSections.length > 0
-    ? activeSimulatorSections.map(sec => ({
+  const [selectedPaidTestForUpgrade, setSelectedPaidTestForUpgrade] = useState<any | null>(null);
+
+  const rawMocktests = availableMocktests.length > 0
+    ? availableMocktests
+    : activeSimulatorSections.map(sec => ({
         id: sec.metadata?.examSlug || sec.id,
         title: sec.name,
         exam: sec.metadata?.authority || sec.name,
@@ -88,9 +91,16 @@ const Dashboard = () => {
         passingScore: sec.metadata?.passingScore || 60,
         passScore: sec.metadata?.passingScore || 60,
         category: sec.badgeText || (sec.metadata?.authority?.split(' ')[0] || 'Prometric'),
-        difficulty: sec.metadata?.difficulty || 'Exam Grade'
-      }))
-    : availableMocktests;
+        difficulty: sec.metadata?.difficulty || 'Exam Grade',
+        isPaid: sec.metadata?.isPaid || false,
+        isListed: sec.metadata?.isListed !== false
+      }));
+
+  const displayedMocktests = rawMocktests.filter(test => {
+    // Listed mock tests only show on student side; admins see all
+    if (!isAdmin && test.isListed === false) return false;
+    return true;
+  });
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1372,25 +1382,49 @@ const Dashboard = () => {
 
         {/* TAB: PROMETRIC EXAM SIMULATORS */}
         {activeTab === 'mocktests' && (
-          !isAdmin && !isPaid ? (
-            <PremiumUpgradeScreen moduleName="Mock Tests" inline />
-          ) : (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-              <div>
-                <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric Exam Simulators</h2>
-                <p className="text-[#45464D] text-xs font-medium">Full-length timed exam simulators strictly matched to DHA, HAAD, and SMLE blueprints.</p>
-              </div>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-black font-display text-[#0B1C30]">Prometric Exam Simulators</h2>
+              <p className="text-[#45464D] text-xs font-medium">Full-length timed exam simulators strictly matched to DHA, HAAD, and SMLE blueprints.</p>
+            </div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {displayedMocktests.map((test, idx) => (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayedMocktests.map((test, idx) => {
+                const isTestPaid = Boolean(test.isPaid);
+                const isLockedForStudent = isTestPaid && !isAdmin && !isPaid;
+
+                return (
                   <div key={idx} className="bg-white p-6 rounded-3xl border border-[#E5EEFF] shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
                     <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block">
+                          {test.category || 'Prometric'}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {isAdmin && test.isListed === false && (
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-700 text-[9px] font-black uppercase rounded-lg">
+                              Unlisted
+                            </span>
+                          )}
+                          {isTestPaid ? (
+                            <span className="px-2.5 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-800 text-[10px] font-black uppercase rounded-xl flex items-center gap-1">
+                              <Lock size={12} className="text-amber-600" />
+                              PRO / PAID
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 text-[10px] font-black uppercase rounded-xl flex items-center gap-1">
+                              <Sparkles size={12} className="text-emerald-600" />
+                              FREE
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="flex items-center gap-3.5 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-[#EFF4FF] text-[#3853A4] flex items-center justify-center font-bold shrink-0">
                           <Award size={24} />
                         </div>
                         <div>
-                          <span className="text-[10px] font-extrabold text-[#3853A4] uppercase tracking-wider block">{test.category}</span>
                           <h3 className="font-extrabold text-[#0B1C30] text-sm leading-snug">{test.title}</h3>
                         </div>
                       </div>
@@ -1402,7 +1436,7 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-[#45464D] block">Time Limit</span>
-                          <span className="text-xs font-black text-[#0B1C30]">{test.timeLimit} mins</span>
+                          <span className="text-xs font-black text-[#0B1C30]">{test.timeLimit || 180} mins</span>
                         </div>
                         <div>
                           <span className="text-[10px] font-bold text-[#45464D] block">Pass Score</span>
@@ -1411,18 +1445,28 @@ const Dashboard = () => {
                       </div>
                     </div>
 
-                    <button 
-                      onClick={() => navigate(`/mock-test-intro`)}
-                      className="w-full py-3.5 rounded-2xl bg-[#3853A4] text-white font-extrabold text-xs hover:bg-[#2F4487] transition-all shadow-md shadow-[#3853A4]/20 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <span>Launch Simulator</span>
-                      <PlayCircle size={16} />
-                    </button>
+                    {isLockedForStudent ? (
+                      <button 
+                        onClick={() => setSelectedPaidTestForUpgrade(test)}
+                        className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white font-extrabold text-xs hover:from-amber-600 hover:to-amber-700 transition-all shadow-md shadow-amber-500/20 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Lock size={15} />
+                        <span>Unlock with Pro (Paid Test)</span>
+                      </button>
+                    ) : (
+                      <button 
+                        onClick={() => navigate(test.id ? `/mock-test/${test.id}` : `/mock-test-intro`)}
+                        className="w-full py-3.5 rounded-2xl bg-[#3853A4] text-white font-extrabold text-xs hover:bg-[#2F4487] transition-all shadow-md shadow-[#3853A4]/20 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <span>{isTestPaid ? 'Launch Pro Simulator' : 'Launch Free Simulator'}</span>
+                        <PlayCircle size={16} />
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-            </motion.div>
-          )
+                );
+              })}
+            </div>
+          </motion.div>
         )}
 
         {/* TAB 4: QUESTION BANK (Includes Bookmarked MCQs & Custom Module) */}
@@ -1596,6 +1640,30 @@ const Dashboard = () => {
           if (updatedData.photoURL !== undefined) setProfilePhoto(updatedData.photoURL);
         }}
       />
+
+      {/* Upgrade Modal for Paid Mock Tests */}
+      {selectedPaidTestForUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="relative w-full max-w-2xl my-8"
+          >
+            <button
+              onClick={() => setSelectedPaidTestForUpgrade(null)}
+              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X size={20} />
+            </button>
+            <PremiumUpgradeScreen 
+              moduleName={`Mock Test: ${selectedPaidTestForUpgrade?.title || 'Premium Simulator'}`}
+              onBack={() => setSelectedPaidTestForUpgrade(null)}
+              inline
+            />
+          </motion.div>
+        </div>
+      )}
 
     </div>
   );
