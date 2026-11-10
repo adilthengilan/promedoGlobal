@@ -185,6 +185,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Enquiries (Get in Touch, Contact Page, and Consultation Leads): Public create, Admin full access
+    match /enquiries/{enquiryId} {
+      allow read, update, delete: if isAdmin();
+      allow create: if true;
+    }
+
     // Ads: Publicly readable, admin writable
     match /ads/{adId} {
       allow read: if true;

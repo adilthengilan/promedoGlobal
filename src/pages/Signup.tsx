@@ -358,9 +358,11 @@ const Signup: React.FC = () => {
         <div className="relative z-10">
           <div className="flex items-center justify-between gap-4 mb-8 sm:mb-12">
             <Link to="/" className="inline-flex items-center gap-2.5 group">
-              <div className="w-10 h-10 bg-white text-brand-blue rounded-2xl flex items-center justify-center font-extrabold shadow-md group-hover:scale-105 transition-transform">
-                <Sparkles size={20} className="text-brand-blue fill-brand-blue" />
-              </div>
+              <img
+                src="/promedo-logo.png"
+                alt="Promedo"
+                className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
+              />
               <span className="text-2xl font-display font-extrabold tracking-tight text-white">Promedo</span>
             </Link>
 

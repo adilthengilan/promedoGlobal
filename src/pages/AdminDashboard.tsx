@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db, handleFirestoreError, OperationType, auth } from '../lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, updateDoc, query, orderBy, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight, Menu, Moon, Sun, ChevronDown, ChevronRight, Minus, TrendingUp, TrendingDown, Layers, LayoutGrid, SlidersHorizontal, Settings, Activity, Send } from 'lucide-react';
+import { Users, BookOpen, Plus, Trash2, Edit2, LayoutDashboard, DollarSign, X, Upload, LogOut, ClipboardList, AlertTriangle, Trophy, Award, Check, CheckCircle, Megaphone, Sparkles, CalendarCheck, Phone, Mail, Globe, MessageSquare, Bell, BellRing, Volume2, VolumeX, CheckCheck, Radio, Play, CalendarDays, List, LogIn, Flame, RefreshCw, Download, Search, Filter, ArrowUpDown, Crown, Medal, ExternalLink, Copy, UserCheck, Star, ShieldCheck, MessageSquarePlus, Database, CloudUpload, GraduationCap, HelpCircle, Image as ImageIcon, FileText, BarChart3, ArrowRight, Menu, Moon, Sun, ChevronDown, ChevronRight, Minus, TrendingUp, TrendingDown, Layers, LayoutGrid, SlidersHorizontal, Settings, Activity, Send, Inbox } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { ExamGeneratorModal } from '../components/ExamGeneratorModal';
@@ -43,6 +43,10 @@ const AdminDashboard = () => {
   const [ads, setAds] = useState<any[]>([]);
   const [appointments, setAppointments] = useState<any[]>([]);
   const [appointmentViewMode, setAppointmentViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [enquiries, setEnquiries] = useState<any[]>([]);
+  const [enquiryTypeFilter, setEnquiryTypeFilter] = useState<'all' | 'appointment' | 'contact' | 'support'>('all');
+  const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<'all' | 'Pending' | 'Contacted' | 'Completed'>('all');
+  const [enquirySearch, setEnquirySearch] = useState('');
 
   // Real-time notification system state
   const [notifications, setNotifications] = useState<AppointmentNotification[]>([]);
@@ -262,6 +266,51 @@ const AdminDashboard = () => {
       unsubscribe();
     };
   }, [isAdmin, soundEnabled]);
+
+  // Attach real-time Firestore onSnapshot listener for website enquiries
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const q = query(collection(db, 'enquiries'), orderBy('createdAt', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const firestoreList: any[] = [];
+      snapshot.forEach(docSnap => {
+        firestoreList.push({ id: docSnap.id, ...docSnap.data() });
+      });
+
+      let localList: any[] = [];
+      try {
+        localList = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+      } catch (e) {}
+
+      const combinedMap = new Map<string, any>();
+      firestoreList.forEach(item => combinedMap.set(item.id, item));
+      localList.forEach(item => {
+        if (!combinedMap.has(item.id)) {
+          combinedMap.set(item.id, item);
+        }
+      });
+
+      const mergedList = Array.from(combinedMap.values()).sort((a, b) => {
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+      setEnquiries(mergedList);
+    }, (error) => {
+      console.warn("Enquiries onSnapshot error:", error);
+      try {
+        const local = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+        setEnquiries(local);
+      } catch (e) {}
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [isAdmin]);
   const [newCourse, setNewCourse] = useState({
     title: '',
     image: '',
@@ -577,6 +626,49 @@ const AdminDashboard = () => {
     } catch (err) {
       console.error("Error updating appointment status:", err);
       showFeedback("Failed to update appointment status.", "error");
+    }
+  };
+
+  const handleToggleEnquiryStatus = async (id: string, currentStatus: string) => {
+    const nextStatus = currentStatus === 'Pending' ? 'Contacted' : currentStatus === 'Contacted' ? 'Completed' : 'Pending';
+    try {
+      try {
+        await updateDoc(doc(db, 'enquiries', id), { status: nextStatus, updatedAt: new Date().toISOString() });
+      } catch (e) {
+        console.warn("Firestore update enquiry error:", e);
+      }
+
+      try {
+        const local = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+        const updated = local.map((a: any) => a.id === id ? { ...a, status: nextStatus, updatedAt: new Date().toISOString() } : a);
+        localStorage.setItem('local_enquiries', JSON.stringify(updated));
+      } catch (e) {}
+
+      setEnquiries(prev => prev.map(a => a.id === id ? { ...a, status: nextStatus, updatedAt: new Date().toISOString() } : a));
+      showFeedback(`Enquiry status updated to ${nextStatus}.`, "success");
+    } catch (err) {
+      console.error("Error updating enquiry status:", err);
+      showFeedback("Failed to update enquiry status.", "error");
+    }
+  };
+
+  const handleDeleteEnquiry = async (id: string) => {
+    try {
+      try {
+        await deleteDoc(doc(db, 'enquiries', id));
+      } catch (e) {
+        console.warn("Firestore delete enquiry error:", e);
+      }
+      try {
+        const local = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+        const filtered = local.filter((a: any) => a.id !== id);
+        localStorage.setItem('local_enquiries', JSON.stringify(filtered));
+      } catch (e) {}
+      setEnquiries(prev => prev.filter(a => a.id !== id));
+      showFeedback("Enquiry deleted successfully!", "success");
+    } catch (err) {
+      console.error("Error deleting enquiry:", err);
+      showFeedback("Failed to delete enquiry.", "error");
     }
   };
 
@@ -1021,6 +1113,31 @@ const AdminDashboard = () => {
     }))
   ].slice(0, 5);
 
+  const filteredEnquiries = enquiries.filter(item => {
+    if (enquiryTypeFilter !== 'all') {
+      if (enquiryTypeFilter === 'appointment' && item.type !== 'appointment') return false;
+      if (enquiryTypeFilter === 'contact' && item.type !== 'contact') return false;
+      if (enquiryTypeFilter === 'support' && item.type !== 'support') return false;
+    }
+    if (enquiryStatusFilter !== 'all') {
+      const current = item.status || 'Pending';
+      if (current !== enquiryStatusFilter) return false;
+    }
+    if (enquirySearch.trim()) {
+      const s = enquirySearch.toLowerCase();
+      const name = (item.fullName || '').toLowerCase();
+      const email = (item.email || '').toLowerCase();
+      const phone = (item.phone || item.whatsapp || '').toLowerCase();
+      const subject = (item.subject || '').toLowerCase();
+      const message = (item.message || item.otherDetails || '').toLowerCase();
+      const country = (item.country || '').toLowerCase();
+      if (!name.includes(s) && !email.includes(s) && !phone.includes(s) && !subject.includes(s) && !message.includes(s) && !country.includes(s)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <div className={`min-h-screen flex bg-[#F8FAFC] ${darkMode ? 'dark bg-slate-900 text-slate-100' : ''} text-gray-800 antialiased`}>
       {/* 1. Promedo Global Admin Obsidian Slate Sidebar */}
@@ -1031,13 +1148,12 @@ const AdminDashboard = () => {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            {/* Promedo Shield Gradient Badge */}
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3853A4] to-[#2B3F7E] text-white font-black flex items-center justify-center text-lg shadow-md shadow-[#3853A4]/30">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
-                <path d="M9 12l2 2 4-4" />
-              </svg>
-            </div>
+            {/* Promedo Navbar Logo */}
+            <img
+              src="/promedo-logo.png"
+              alt="Promedo"
+              className="w-10 h-10 object-contain group-hover:scale-105 transition-transform shrink-0"
+            />
             {sidebarOpen && (
               <div className="flex flex-col">
                 <span className="font-black text-white text-lg tracking-tight leading-none">PROMEDO</span>
@@ -1224,6 +1340,33 @@ const AdminDashboard = () => {
               {sidebarOpen && appointments.length > 0 && (
                 <span className="w-5 h-5 rounded-full bg-[#3853A4] text-white text-[10px] font-black flex items-center justify-center">
                   {appointments.length}
+                </span>
+              )}
+            </button>
+
+            {/* Website Enquiries & Leads */}
+            <button
+              onClick={() => setActiveTab('enquiries')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold transition-all cursor-pointer ${
+                activeTab === 'enquiries' 
+                  ? 'bg-[#3853A4] text-white shadow-md shadow-[#3853A4]/30 font-black' 
+                  : 'text-slate-300 hover:text-white hover:bg-[#222C42]'
+              }`}
+              title="Manage Website Enquiries & Leads"
+            >
+              <div className="flex items-center gap-3">
+                <Inbox size={17} className={activeTab === 'enquiries' ? 'text-white' : 'text-slate-400'} />
+                {sidebarOpen && <span>Enquiries</span>}
+              </div>
+              {sidebarOpen && enquiries.length > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black flex items-center justify-center ${
+                  enquiries.filter(e => e.status === 'Pending').length > 0
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-[#3853A4] text-white'
+                }`}>
+                  {enquiries.filter(e => e.status === 'Pending').length > 0 
+                    ? `${enquiries.filter(e => e.status === 'Pending').length} new`
+                    : enquiries.length}
                 </span>
               )}
             </button>
@@ -1715,7 +1858,7 @@ const AdminDashboard = () => {
                   </div>
                 ) : (
                   <h2 className="text-xl font-bold capitalize text-gray-900">
-                    {activeTab === 'sales' ? 'Recent Sales' : activeTab === 'mocktests' ? 'Mocktest Catalog' : activeTab === 'appointments' ? `Booked Appointments (${appointments.length})` : activeTab === 'halloffame' ? 'Testimonials & Reviews Management' : `${activeTab} List`}
+                    {activeTab === 'sales' ? 'Recent Sales' : activeTab === 'mocktests' ? 'Mocktest Catalog' : activeTab === 'appointments' ? `Booked Appointments (${appointments.length})` : activeTab === 'enquiries' ? `Website Enquiries & Leads (${enquiries.length})` : activeTab === 'halloffame' ? 'Testimonials & Reviews Management' : `${activeTab} List`}
                   </h2>
                 )}
                 {activeTab === 'courses' && (
@@ -2648,6 +2791,334 @@ const AdminDashboard = () => {
                                 >
                                   <Trash2 size={16} />
                                 </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : activeTab === 'enquiries' ? (
+                  <div className="space-y-6">
+                    {/* Header Banner */}
+                    <div className="p-6 bg-gradient-to-r from-[#1B2234] via-[#24304A] to-[#3853A4] rounded-3xl text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 border border-blue-900/40">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/10 text-white border border-white/20 flex items-center justify-center shrink-0 shadow-inner">
+                          <Inbox size={24} className="text-white" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-lg text-white">Website Enquiries & Leads</h3>
+                            <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-[10px] font-black uppercase tracking-wide flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                              Real-Time Stream
+                            </span>
+                          </div>
+                          <p className="text-xs text-blue-100/80 mt-1 max-w-xl">
+                            All prospective candidate inquiries from landing page appointments, get-in-touch submissions, and contact support forms are centralized here with direct contact actions.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Summary Counter Pill */}
+                      <div className="flex items-center gap-3 bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 shrink-0 self-start md:self-auto">
+                        <div className="text-right">
+                          <div className="text-[10px] uppercase font-bold text-blue-200">Pending Actions</div>
+                          <div className="text-xl font-black text-amber-300">
+                            {enquiries.filter(e => e.status === 'Pending').length}
+                          </div>
+                        </div>
+                        <div className="h-8 w-px bg-white/20"></div>
+                        <div className="text-left">
+                          <div className="text-[10px] uppercase font-bold text-blue-200">Total Leads</div>
+                          <div className="text-xl font-black text-white">{enquiries.length}</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats Metric Cards */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 text-brand-blue flex items-center justify-center font-bold">
+                          <Inbox size={20} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">All Enquiries</div>
+                          <div className="text-xl font-black text-gray-900">{enquiries.length}</div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                          <AlertTriangle size={20} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Pending Review</div>
+                          <div className="text-xl font-black text-amber-600">
+                            {enquiries.filter(e => e.status === 'Pending').length}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                          <CalendarCheck size={20} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Booked Consults</div>
+                          <div className="text-xl font-black text-purple-600">
+                            {enquiries.filter(e => e.type === 'appointment').length}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                          <CheckCircle size={20} />
+                        </div>
+                        <div>
+                          <div className="text-[11px] font-bold text-gray-400 uppercase tracking-wide">Completed</div>
+                          <div className="text-xl font-black text-emerald-600">
+                            {enquiries.filter(e => e.status === 'Completed').length}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Controls: Search & Filters */}
+                    <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                      {/* Search */}
+                      <div className="relative flex-1">
+                        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input
+                          type="text"
+                          value={enquirySearch}
+                          onChange={(e) => setEnquirySearch(e.target.value)}
+                          placeholder="Search candidate name, email, phone, subject, notes..."
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                        />
+                        {enquirySearch && (
+                          <button
+                            onClick={() => setEnquirySearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Type Filter Buttons */}
+                      <div className="flex flex-wrap items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-200 text-xs font-bold text-gray-600">
+                        <button
+                          onClick={() => setEnquiryTypeFilter('all')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                            enquiryTypeFilter === 'all' ? 'bg-[#3853A4] text-white shadow-xs font-black' : 'hover:text-gray-900'
+                          }`}
+                        >
+                          All Sources
+                        </button>
+                        <button
+                          onClick={() => setEnquiryTypeFilter('appointment')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            enquiryTypeFilter === 'appointment' ? 'bg-[#3853A4] text-white shadow-xs font-black' : 'hover:text-gray-900'
+                          }`}
+                        >
+                          <CalendarCheck size={13} />
+                          Appointments
+                        </button>
+                        <button
+                          onClick={() => setEnquiryTypeFilter('contact')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            enquiryTypeFilter === 'contact' ? 'bg-[#3853A4] text-white shadow-xs font-black' : 'hover:text-gray-900'
+                          }`}
+                        >
+                          <Send size={13} />
+                          Get in Touch
+                        </button>
+                        <button
+                          onClick={() => setEnquiryTypeFilter('support')}
+                          className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+                            enquiryTypeFilter === 'support' ? 'bg-[#3853A4] text-white shadow-xs font-black' : 'hover:text-gray-900'
+                          }`}
+                        >
+                          <HelpCircle size={13} />
+                          Support
+                        </button>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Filter size={14} className="text-gray-400" />
+                        <select
+                          value={enquiryStatusFilter}
+                          onChange={(e: any) => setEnquiryStatusFilter(e.target.value)}
+                          className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 focus:outline-none focus:border-brand-blue"
+                        >
+                          <option value="all">All Statuses</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Contacted">Contacted</option>
+                          <option value="Completed">Completed</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Enquiries List */}
+                    {filteredEnquiries.length === 0 ? (
+                      <div className="bg-white rounded-3xl p-16 text-center border border-gray-100 shadow-sm space-y-3">
+                        <div className="w-16 h-16 rounded-2xl bg-gray-50 text-gray-300 flex items-center justify-center mx-auto">
+                          <Inbox size={32} />
+                        </div>
+                        <h4 className="text-base font-extrabold text-gray-800">No Enquiries Found</h4>
+                        <p className="text-xs text-gray-500 max-w-sm mx-auto">
+                          {enquirySearch || enquiryTypeFilter !== 'all' || enquiryStatusFilter !== 'all'
+                            ? "Try adjusting your filters or search terms."
+                            : "New candidate enquiries from 'Book an Appointment', 'Get in Touch' and 'Contact Support' will appear here in real-time."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {filteredEnquiries.map((item) => {
+                          const isAppointment = item.type === 'appointment';
+                          const isSupport = item.type === 'support';
+                          const isPending = item.status === 'Pending';
+                          const isCompleted = item.status === 'Completed';
+
+                          return (
+                            <div
+                              key={item.id}
+                              className={`bg-white rounded-2xl p-5 border transition-all shadow-xs hover:shadow-md ${
+                                isPending
+                                  ? 'border-amber-200/80 bg-amber-50/10'
+                                  : isCompleted
+                                  ? 'border-gray-200/80 opacity-90'
+                                  : 'border-gray-200'
+                              }`}
+                            >
+                              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                                {/* Left Candidate & Content Info */}
+                                <div className="space-y-3 flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {/* Source Badge */}
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
+                                      isAppointment 
+                                        ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                                        : isSupport 
+                                        ? 'bg-sky-100 text-sky-700 border border-sky-200' 
+                                        : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                    }`}>
+                                      {isAppointment ? <CalendarCheck size={11} /> : isSupport ? <HelpCircle size={11} /> : <Send size={11} />}
+                                      {item.source || (isAppointment ? 'Appointment Booking' : isSupport ? 'Support Request' : 'Get in Touch')}
+                                    </span>
+
+                                    {/* Status Badge Toggle */}
+                                    <button
+                                      onClick={() => handleToggleEnquiryStatus(item.id, item.status || 'Pending')}
+                                      className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all flex items-center gap-1 ${
+                                        item.status === 'Completed'
+                                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200 border border-emerald-300'
+                                          : item.status === 'Contacted'
+                                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300'
+                                          : 'bg-amber-100 text-amber-800 hover:bg-amber-200 border border-amber-300 animate-pulse'
+                                      }`}
+                                      title="Click to advance status (Pending -> Contacted -> Completed)"
+                                    >
+                                      {item.status === 'Completed' ? <CheckCircle size={11} /> : <Radio size={11} />}
+                                      <span>Status: {item.status || 'Pending'} (Click to change)</span>
+                                    </button>
+
+                                    {/* Date */}
+                                    <span className="text-[11px] text-gray-400 font-medium">
+                                      {item.createdAt ? new Date(item.createdAt).toLocaleString('en-US', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short'
+                                      }) : 'Recent'}
+                                    </span>
+                                  </div>
+
+                                  {/* Candidate Main Info */}
+                                  <div>
+                                    <h4 className="text-base font-extrabold text-gray-900 flex items-center gap-2">
+                                      {item.fullName || 'Candidate / Doctor'}
+                                      {item.country && (
+                                        <span className="text-xs font-semibold text-gray-500 flex items-center gap-1">
+                                          <Globe size={12} className="text-gray-400" />
+                                          {item.country}
+                                        </span>
+                                      )}
+                                    </h4>
+
+                                    {/* Subject / Exam */}
+                                    {(item.subject || item.examPreparingFor) && (
+                                      <p className="text-xs font-black text-brand-blue mt-0.5">
+                                        {item.subject ? `Subject: ${item.subject}` : `Target Exam: ${item.examPreparingFor}`}
+                                        {item.qualification && ` • Qualification: ${item.qualification}`}
+                                        {item.plannedExamDate && ` • Target Date: ${item.plannedExamDate}`}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {/* Message / Details Body */}
+                                  {(item.message || item.otherDetails) && (
+                                    <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 leading-relaxed border border-gray-100">
+                                      <p className="font-semibold text-gray-500 text-[11px] uppercase tracking-wider mb-1">
+                                        Inquiry Message / Academic Details:
+                                      </p>
+                                      <p className="whitespace-pre-line">{item.message || item.otherDetails}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Contact Row */}
+                                  <div className="flex flex-wrap items-center gap-4 text-xs font-medium text-gray-600 pt-1">
+                                    {item.email && (
+                                      <a
+                                        href={`mailto:${item.email}?subject=Promedo%20Global%20Follow-up%20for%20Dr.%20${encodeURIComponent(item.fullName || '')}`}
+                                        className="flex items-center gap-1.5 hover:text-brand-blue transition-colors group"
+                                      >
+                                        <Mail size={14} className="text-gray-400 group-hover:text-brand-blue" />
+                                        <span>{item.email}</span>
+                                      </a>
+                                    )}
+                                    {(item.phone || item.whatsapp) && (
+                                      <span className="flex items-center gap-1.5 text-gray-700 font-bold">
+                                        <Phone size={14} className="text-gray-400" />
+                                        <span>{item.phone || item.whatsapp}</span>
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Right Actions Column */}
+                                <div className="flex sm:flex-row lg:flex-col items-center gap-2 shrink-0 self-start">
+                                  {(item.phone || item.whatsapp) && (
+                                    <a
+                                      href={`https://wa.me/${(item.whatsapp || item.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello Dr. ${item.fullName || 'Candidate'}, greetings from Promedo Global! We received your inquiry regarding ${item.examPreparingFor || item.subject || 'licensing exam preparation'}. How may our academic team assist you today?`)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer w-full"
+                                    >
+                                      <MessageSquare size={13} />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  )}
+
+                                  {item.email && (
+                                    <a
+                                      href={`mailto:${item.email}?subject=${encodeURIComponent(`Promedo Global Assistance - ${item.subject || item.examPreparingFor || 'Inquiry Follow-up'}`)}`}
+                                      className="px-4 py-2 bg-blue-50 hover:bg-brand-blue hover:text-white text-brand-blue rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all cursor-pointer w-full"
+                                    >
+                                      <Mail size={13} />
+                                      <span>Email Reply</span>
+                                    </a>
+                                  )}
+
+                                  <button
+                                    onClick={() => handleDeleteEnquiry(item.id)}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+                                    title="Delete this enquiry"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );

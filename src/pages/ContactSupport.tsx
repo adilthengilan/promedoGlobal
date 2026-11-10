@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { Mail, Phone, MessageCircle, Instagram, Send, CheckCircle2, Clock, HelpCircle, ChevronDown, Sparkles, ShieldCheck, Headphones } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const FAQ_ITEMS = [
   {
@@ -38,15 +40,38 @@ const ContactSupport = () => {
   const [loading, setLoading] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate form submission
-    setTimeout(() => {
-      setLoading(false);
-      setSubmitted(true);
-    }, 1000);
+    const payload = {
+      fullName: formData.name.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      subject: formData.inquiryType,
+      message: formData.message.trim(),
+      type: 'support',
+      source: 'Contact Support Page',
+      status: 'Pending',
+      createdAt: new Date().toISOString()
+    };
+
+    let docId = 'enq_sup_' + Date.now();
+
+    try {
+      const docRef = await addDoc(collection(db, 'enquiries'), payload);
+      if (docRef?.id) docId = docRef.id;
+    } catch (err) {
+      console.warn("Could not save support enquiry directly to Firestore, saving locally:", err);
+    }
+
+    try {
+      const existing = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+      localStorage.setItem('local_enquiries', JSON.stringify([{ id: docId, ...payload }, ...existing]));
+    } catch (_) {}
+
+    setLoading(false);
+    setSubmitted(true);
   };
 
   return (

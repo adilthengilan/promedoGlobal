@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, User, Phone, Mail, GraduationCap, Calendar, Globe, ClipboardList, MessageSquare, CalendarCheck, Loader2 } from 'lucide-react';
+import { X, User, Phone, Mail, GraduationCap, Calendar, Globe, ClipboardList, MessageSquare, CalendarCheck, Loader2, CheckCircle2 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 
@@ -49,6 +49,7 @@ const COUNTRIES = [
 
 const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }) => {
   const [submitting, setSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState({
     fullName: '',
     country: '',
@@ -81,6 +82,25 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }
       createdAt: new Date().toISOString()
     };
 
+    const enquiryPayload = {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.whatsapp,
+      qualification: formData.qualification,
+      graduationYear: formData.graduationYear,
+      plannedExamDate: formData.plannedExamDate,
+      examPreparingFor: formData.examPreparingFor,
+      subject: `Appointment Booking: ${formData.examPreparingFor || 'Medical Licensing'}`,
+      message: formData.otherDetails 
+        ? `Exam: ${formData.examPreparingFor}. Details: ${formData.otherDetails}. Qualification: ${formData.qualification} (${formData.graduationYear})` 
+        : `Exam: ${formData.examPreparingFor}. Qualification: ${formData.qualification} (${formData.graduationYear}). Planned Date: ${formData.plannedExamDate || 'Flexible'}`,
+      country: formData.country,
+      type: 'appointment',
+      source: 'Landing Page - Book an Appointment',
+      status: 'Pending',
+      createdAt: new Date().toISOString()
+    };
+
     let docId = 'app_' + Date.now();
 
     try {
@@ -91,18 +111,32 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }
     }
 
     try {
-      const existing = JSON.parse(localStorage.getItem('local_appointments') || '[]');
+      await addDoc(collection(db, 'enquiries'), enquiryPayload);
+    } catch (err) {
+      console.warn("Could not save enquiry to Firestore directly:", err);
+    }
+
+    try {
+      const existingAppts = JSON.parse(localStorage.getItem('local_appointments') || '[]');
       localStorage.setItem('local_appointments', JSON.stringify([
         { id: docId, ...appointmentPayload },
-        ...existing
+        ...existingAppts
+      ]));
+      const existingEnq = JSON.parse(localStorage.getItem('local_enquiries') || '[]');
+      localStorage.setItem('local_enquiries', JSON.stringify([
+        { id: 'enq_' + docId, ...enquiryPayload },
+        ...existingEnq
       ]));
     } catch (e) {
       console.error("Local appointment save error:", e);
     }
 
     setSubmitting(false);
-    alert('Your appointment has been booked successfully! Our advisory team will contact you on WhatsApp / Email shortly.');
-    
+    setIsSuccess(true);
+  };
+
+  const handleClose = () => {
+    setIsSuccess(false);
     setFormData({
       fullName: '',
       country: '',
@@ -114,7 +148,6 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }
       email: '',
       whatsapp: ''
     });
-
     onClose();
   };
 
@@ -127,12 +160,50 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-[#F3F4F6] rounded-[40px] w-full max-w-3xl max-h-[95vh] overflow-y-auto shadow-2xl relative border border-white/20">
         <button 
-          onClick={onClose}
-          className="absolute top-8 right-8 p-2 hover:bg-gray-200 rounded-full transition-colors z-10"
+          onClick={handleClose}
+          className="absolute top-8 right-8 p-2 hover:bg-gray-200 rounded-full transition-colors z-10 cursor-pointer"
         >
           <X size={24} className="text-gray-600" />
         </button>
 
+        {isSuccess ? (
+          <div className="p-8 md:p-14 text-center space-y-6">
+            <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto border border-emerald-100 shadow-sm">
+              <CheckCircle2 size={44} />
+            </div>
+            <div>
+              <span className="text-[11px] font-black uppercase tracking-wider text-emerald-600 px-3 py-1 bg-emerald-50 rounded-full border border-emerald-100">
+                Booking Confirmed
+              </span>
+              <h2 className="text-3xl font-black text-gray-900 mt-3 mb-2">Appointment Request Submitted!</h2>
+              <p className="text-sm text-gray-600 max-w-md mx-auto leading-relaxed">
+                Thank you, Dr. {formData.fullName || 'Candidate'}. Your appointment details and exam guidance request have been routed to Dr. Muhammed Saleem and our academic advisory team.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 max-w-md mx-auto border border-gray-200 text-left text-xs space-y-2.5">
+              <div className="flex justify-between text-gray-500 font-bold">
+                <span>Target Licensing Exam:</span>
+                <span className="text-gray-900 font-black">{formData.examPreparingFor || 'GCC Licensing'}</span>
+              </div>
+              <div className="flex justify-between text-gray-500 font-bold">
+                <span>WhatsApp Contact:</span>
+                <span className="text-gray-900 font-black">{formData.whatsapp || 'Provided'}</span>
+              </div>
+              <div className="flex justify-between text-gray-500 font-bold">
+                <span>Estimated Response Time:</span>
+                <span className="text-emerald-600 font-black">Within 2 to 4 Hours</span>
+              </div>
+            </div>
+
+            <button
+              onClick={handleClose}
+              className="px-8 py-3 bg-brand-blue hover:bg-blue-700 text-white font-black text-sm rounded-2xl transition-all shadow-md shadow-brand-blue/20 cursor-pointer"
+            >
+              Done & Close
+            </button>
+          </div>
+        ) : (
         <div className="p-8 md:p-12">
           <div className="flex items-start gap-4 mb-10">
             <div className="bg-blue-50 p-3 rounded-2xl shadow-sm text-brand-blue">
@@ -349,6 +420,7 @@ const ConsultationModal: React.FC<ConsultationModalProps> = ({ isOpen, onClose }
             </button>
           </form>
         </div>
+        )}
       </div>
     </div>
   );

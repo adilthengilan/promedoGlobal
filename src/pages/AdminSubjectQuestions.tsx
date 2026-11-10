@@ -636,11 +636,13 @@ export default function AdminSubjectQuestions() {
           <div className="h-4 w-px bg-gray-200 hidden sm:block shrink-0" />
           
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-teal-500 text-white font-black flex items-center justify-center text-sm shadow-2xs shrink-0">
-              G
-            </div>
+            <img
+              src="/promedo-logo.png"
+              alt="Promedo"
+              className="w-8 h-8 object-contain shrink-0"
+            />
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 truncate">
-              <span className="text-gray-900 font-extrabold hidden md:inline">Gentelella v4</span>
+              <span className="text-gray-900 font-extrabold hidden md:inline">Promedo Global</span>
               <span className="text-gray-300 hidden md:inline">/</span>
               <span className="text-gray-600 hidden sm:inline">Question Bank</span>
               <span className="text-gray-300">/</span>
@@ -793,8 +795,6 @@ export default function AdminSubjectQuestions() {
                   {subjects.map(s => {
                     const count = subjectCounts[s.id] || 0;
                     const isSelected = selectedSubjectId === s.id;
-                    const percent = Math.min(Math.round((count / 120) * 100), 100);
-                    const isDone = count >= 120;
                     
                     return (
                       <div 
@@ -807,21 +807,14 @@ export default function AdminSubjectQuestions() {
                         }`}
                       >
                         <div>
-                          <div className="flex justify-between items-start gap-2 mb-2">
-                            <span className="text-base font-extrabold text-gray-900 group-hover:text-teal-600 transition-colors truncate block max-w-[180px]" title={s.name}>
+                          <div className="flex justify-between items-start gap-2 mb-3">
+                            <span className="text-base font-extrabold text-gray-900 group-hover:text-teal-600 transition-colors truncate block max-w-[170px]" title={s.name}>
                               {s.name}
                             </span>
-                            <div className="flex items-center gap-1 shrink-0 px-2 py-0.5 rounded-md bg-gray-100 text-xs font-bold text-gray-700">
-                              <span className="font-black text-gray-900">{count}</span>
-                              <span className="text-[10px] text-gray-400">/ 120</span>
+                            <div className="flex items-center gap-1.5 shrink-0 px-2.5 py-1 rounded-lg bg-teal-50 text-xs font-bold text-teal-800 border border-teal-200/80">
+                              <span className="font-black text-teal-900">{count}</span>
+                              <span className="text-[11px] font-semibold text-teal-700">{count === 1 ? 'Question' : 'Questions'}</span>
                             </div>
-                          </div>
-
-                          <div className="w-full h-1.5 bg-gray-100 rounded-full mb-3.5 overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full transition-all duration-500 ${isDone ? 'bg-emerald-500' : 'bg-teal-500'}`}
-                              style={{ width: `${percent}%` }}
-                            />
                           </div>
 
                           <p className="text-xs text-gray-500 line-clamp-3 mb-5 min-h-[44px] leading-relaxed">
@@ -900,10 +893,10 @@ export default function AdminSubjectQuestions() {
                     </div>
 
                     <div className="flex flex-col items-end shrink-0">
-                      <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider">PROGRESSION</span>
+                      <span className="text-[10px] text-gray-400 font-black uppercase tracking-wider">QUESTIONS</span>
                       <div className="flex items-baseline gap-1 mt-1">
-                        <span className="text-xl font-black text-brand-blue">{questions.length}</span>
-                        <span className="text-xs text-gray-400 font-bold">/ 120 Qs</span>
+                        <span className="text-2xl font-black text-brand-blue">{questions.length}</span>
+                        <span className="text-xs text-gray-500 font-bold">{questions.length === 1 ? 'Question' : 'Questions'}</span>
                       </div>
                     </div>
                   </div>

@@ -26,11 +26,17 @@
             var msg = (err.message || String(err)).toLowerCase();
             var name = (err.name || '').toLowerCase();
             return name === 'aborterror' ||
+                   name === 'quotaexceedederror' ||
                    msg.indexOf('signal is aborted') !== -1 ||
                    msg.indexOf('aborterror') !== -1 ||
                    msg.indexOf('failed to fetch') !== -1 ||
                    msg.indexOf('networkerror') !== -1 ||
                    msg.indexOf('load failed') !== -1 ||
+                   msg.indexOf('file_error_no_space') !== -1 ||
+                   msg.indexOf('indexeddb') !== -1 ||
+                   msg.indexOf('leveldb') !== -1 ||
+                   msg.indexOf('io error') !== -1 ||
+                   msg.indexOf('writablefileappend') !== -1 ||
                    msg.indexOf('missing or insufficient permissions') !== -1;
           }
 
@@ -54,6 +60,8 @@
     <meta name="description" content="Your trusted partner for a successful GCC licensing journey. Features authentic Prometric computer-based mock test simulators, candidate performance analytics, and clinical recall preparation." />
     <meta property="og:title" content="Promedo - Online Learning Platform" />
     <meta property="og:description" content="Your trusted partner for a successful GCC licensing journey. Features authentic Prometric computer-based mock test simulators, candidate performance analytics, and clinical recall preparation." />
+    <link rel="icon" type="image/png" href="/promedo-logo.png" />
+    <link rel="apple-touch-icon" href="/promedo-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.cdnfonts.com/css/nohemi" rel="stylesheet">

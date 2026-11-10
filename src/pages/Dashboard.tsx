@@ -430,7 +430,20 @@ const Dashboard = () => {
     <div className="min-h-[calc(100vh-5rem)] bg-[#F8FAFF] text-[#0B1C30] flex flex-col lg:flex-row">
       
       {/* SIDEBAR NAVIGATION (Desktop) */}
-      <aside className="bg-white border-r border-[#E5EEFF] w-64 shrink-0 sticky top-20 h-[calc(100vh-5rem)] hidden lg:flex flex-col z-20 shadow-xs pt-6">
+      <aside className="bg-white border-r border-[#E5EEFF] w-64 shrink-0 sticky top-20 h-[calc(100vh-5rem)] hidden lg:flex flex-col z-20 shadow-xs pt-5">
+
+        {/* Promedo Student Portal Brand Header */}
+        <div className="px-5 pb-4 mb-3 border-b border-[#E5EEFF] flex items-center gap-3">
+          <img
+            src="/promedo-logo.png"
+            alt="Promedo"
+            className="w-8 h-8 object-contain shrink-0"
+          />
+          <div className="flex flex-col">
+            <span className="font-black text-sm tracking-tight text-[#0B1C30]">PROMEDO</span>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#3853A4]">STUDENT PORTAL</span>
+          </div>
+        </div>
 
         {/* Sidebar Nav Links */}
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto no-scrollbar">

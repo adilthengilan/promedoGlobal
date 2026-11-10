@@ -220,9 +220,11 @@ const Login: React.FC = () => {
       {/* Top Header Navigation */}
       <header className="w-full max-w-md sm:max-w-xl md:max-w-2xl px-4 py-4 sm:py-6 flex items-center justify-between z-10">
         <Link to="/" className="inline-flex items-center gap-2.5 group">
-          <div className="w-10 h-10 bg-brand-blue text-white rounded-2xl flex items-center justify-center font-extrabold shadow-md group-hover:scale-105 transition-transform">
-            <Sparkles size={20} className="text-white fill-white" />
-          </div>
+          <img
+            src="/promedo-logo.png"
+            alt="Promedo"
+            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
+          />
           <span className="text-2xl font-display font-extrabold tracking-tight text-gray-900">Promedo</span>
         </Link>
 

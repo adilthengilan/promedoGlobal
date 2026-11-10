@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { initializeFirestore, getFirestore } from "firebase/firestore";
+import { initializeFirestore, getFirestore, memoryLocalCache } from "firebase/firestore";
 
 import rawFirebaseConfig from "../../firebase-applet-config.json";
 
@@ -25,17 +25,25 @@ try {
 
 export const auth = getAuth(app);
 
-// Use initializeFirestore with experimentalForceLongPolling and shorter timeout to avoid connection aborts behind proxies
+// Use in-memory cache to prevent IndexedDB leveldb storage exhaustion (FILE_ERROR_NO_SPACE)
+// and force long polling with shorter timeout to avoid proxy drops
 let firestoreInstance;
 try {
   firestoreInstance = initializeFirestore(app, {
+    localCache: memoryLocalCache(),
     experimentalForceLongPolling: true,
     experimentalLongPollingOptions: {
       timeoutSeconds: 12,
     },
   });
 } catch {
-  firestoreInstance = getFirestore(app);
+  try {
+    firestoreInstance = initializeFirestore(app, {
+      localCache: memoryLocalCache(),
+    });
+  } catch {
+    firestoreInstance = getFirestore(app);
+  }
 }
 
 export const db = firestoreInstance;
@@ -72,13 +80,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errMsg = error instanceof Error ? error.message : String(error);
   const errName = error instanceof Error ? error.name : '';
 
-  // Suppress harmless transient aborts from Firestore transport cancellation / reconnection
+  // Suppress harmless transient aborts and browser storage quota constraints
   if (
     errName === 'AbortError' ||
+    errName === 'QuotaExceededError' ||
     errMsg.includes('signal is aborted') ||
-    errMsg.includes('AbortError')
+    errMsg.includes('AbortError') ||
+    errMsg.includes('FILE_ERROR_NO_SPACE') ||
+    errMsg.includes('indexeddb') ||
+    errMsg.includes('leveldb') ||
+    errMsg.includes('IO error')
   ) {
-    console.warn(`[Firestore] Transport abort ignored for ${operationType} on ${path}:`, errMsg);
+    console.warn(`[Firestore] Transport abort or storage constraint ignored for ${operationType} on ${path}:`, errMsg);
     return;
   }
 

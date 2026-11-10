@@ -4,7 +4,7 @@ import { Trophy } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 
-const DEFAULT_ROW_1 = [
+const DEFAULT_POSTERS = [
   "./dr1.jpeg",
   "./dr2.jpeg",
   "./dr3.jpeg",
@@ -27,12 +27,8 @@ const DEFAULT_ROW_1 = [
   "./dr20.jpeg"
 ];
 
-const DEFAULT_ROW_2 = [
-  ];
-
 const Faculty = () => {
-  const [row1Images, setRow1Images] = useState<string[]>(DEFAULT_ROW_1);
-  const [row2Images, setRow2Images] = useState<string[]>(DEFAULT_ROW_2);
+  const [posters, setPosters] = useState<string[]>(DEFAULT_POSTERS);
 
   const fetchPosters = async () => {
     try {
@@ -61,13 +57,7 @@ const Faculty = () => {
       }
 
       if (fetched.length > 0) {
-        // Distribute posters into two rows
-        const half = Math.ceil(fetched.length / 2);
-        const r1 = fetched.slice(0, half);
-        const r2 = fetched.slice(half);
-
-        setRow1Images([...r1, ...DEFAULT_ROW_1]);
-        setRow2Images([...r2, ...DEFAULT_ROW_2]);
+        setPosters([...fetched, ...DEFAULT_POSTERS]);
       }
     } catch (err) {
       console.warn("Error fetching hall of fame posters:", err);
@@ -78,8 +68,7 @@ const Faculty = () => {
     fetchPosters();
   }, []);
 
-  const marqueeRow1 = [...row1Images, ...row1Images, ...row1Images, ...row1Images];
-  const marqueeRow2 = [...row2Images, ...row2Images, ...row2Images, ...row2Images];
+  const marqueePosters = [...posters, ...posters, ...posters, ...posters];
 
   return (
     <section id="faculty" className="py-16 bg-[#FAFBFD] overflow-hidden relative">
@@ -101,8 +90,8 @@ const Faculty = () => {
         </p>
       </div>
 
-      <div className="space-y-6">
-        {/* Top Row: Scrolling Left to Right */}
+      <div>
+        {/* Scrolling Row */}
         <div className="relative w-full overflow-hidden">
           <motion.div
             className="flex gap-5 w-max"
@@ -113,38 +102,9 @@ const Faculty = () => {
               repeat: Infinity
             }}
           >
-            {marqueeRow1.map((imgUrl, idx) => (
+            {marqueePosters.map((imgUrl, idx) => (
               <div 
-                key={`top-${idx}`} 
-                className="group relative w-[220px] sm:w-[260px] shrink-0 aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-md hover:shadow-2xl hover:scale-105 transition-all duration-300 border border-gray-100 hover:border-brand-blue/30 cursor-pointer"
-              >
-                <img 
-                  src={imgUrl} 
-                  alt="Success Poster" 
-                  className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-105"
-                  referrerPolicy="no-referrer"
-                />
-                {/* Subtle Hover Glow Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Bottom Row: Scrolling Right to Left */}
-        <div className="relative w-full overflow-hidden">
-          <motion.div
-            className="flex gap-5 w-max"
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{
-              ease: "linear",
-              duration: 35,
-              repeat: Infinity
-            }}
-          >
-            {marqueeRow2.map((imgUrl, idx) => (
-              <div 
-                key={`bottom-${idx}`} 
+                key={`poster-${idx}`} 
                 className="group relative w-[220px] sm:w-[260px] shrink-0 aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100 shadow-md hover:shadow-2xl hover:scale-105 transition-all duration-300 border border-gray-100 hover:border-brand-blue/30 cursor-pointer"
               >
                 <img 

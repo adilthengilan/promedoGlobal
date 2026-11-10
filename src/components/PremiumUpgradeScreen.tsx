@@ -48,6 +48,14 @@ export const PremiumUpgradeScreen: React.FC<PremiumUpgradeScreenProps> = ({
 
         {/* Top Header Card Banner */}
         <div className="bg-gradient-to-br from-[#1B2234] via-[#212E4A] to-[#3853A4] text-white p-8 sm:p-10 text-center relative overflow-hidden">
+          <div className="flex justify-center mb-4">
+            <img
+              src="/promedo-logo.png"
+              alt="Promedo"
+              className="w-12 h-12 object-contain drop-shadow-md"
+            />
+          </div>
+
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 border border-white/20 text-blue-100 text-xs font-black tracking-wider uppercase mb-5 backdrop-blur-sm">
             <Lock size={14} className="text-amber-300" />
             <span>Premium Module Protected</span>

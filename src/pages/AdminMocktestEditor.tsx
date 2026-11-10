@@ -288,11 +288,13 @@ const AdminMocktestEditor = () => {
           <div className="h-4 w-px bg-gray-200 hidden sm:block shrink-0" />
           
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-teal-500 text-white font-black flex items-center justify-center text-sm shadow-2xs shrink-0">
-              G
-            </div>
+            <img
+              src="/promedo-logo.png"
+              alt="Promedo"
+              className="w-8 h-8 object-contain shrink-0"
+            />
             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 truncate">
-              <span className="text-gray-900 font-extrabold hidden md:inline">Gentelella v4</span>
+              <span className="text-gray-900 font-extrabold hidden md:inline">Promedo Global</span>
               <span className="text-gray-300 hidden md:inline">/</span>
               <span className="text-gray-600 hidden sm:inline">Mock Exams</span>
               <span className="text-gray-300">/</span>
