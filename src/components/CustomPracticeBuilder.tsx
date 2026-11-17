@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sliders, 
   Sparkles, 
@@ -8,19 +8,14 @@ import {
   Star, 
   Play, 
   Plus, 
+  Minus,
   Trash2, 
   Check, 
   X, 
-  HelpCircle,
-  BarChart3,
-  ChevronRight,
-  ListChecks,
   Zap,
-  Bookmark,
-  Shuffle,
   Edit3,
-  Filter,
-  Search
+  Search,
+  AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -34,8 +29,15 @@ import {
   updateCustomModule,
   CustomPracticeModule 
 } from '../lib/customModuleService';
+import { PracticeSubject } from '../lib/subjectPracticeService';
+import { getBookmarkedQuestionIds } from '../lib/questionFolders';
+import { subscribeToUserBookmarks } from '../lib/userQuestionService';
 
-export default function CustomPracticeBuilder() {
+interface CustomPracticeBuilderProps {
+  subjects?: PracticeSubject[];
+}
+
+export default function CustomPracticeBuilder({ subjects }: CustomPracticeBuilderProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -43,6 +45,7 @@ export default function CustomPracticeBuilder() {
   const [savedModules, setSavedModules] = useState<CustomPracticeModule[]>([]);
   const [loadingModules, setLoadingModules] = useState(true);
   const [searchFilter, setSearchFilter] = useState('');
+  const [userBookmarkedIds, setUserBookmarkedIds] = useState<Set<string>>(new Set());
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -51,9 +54,9 @@ export default function CustomPracticeBuilder() {
   // Form State for Custom Module
   const [title, setTitle] = useState('');
   const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
+  const [subjectCounts, setSubjectCounts] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<'learn' | 'practice'>('practice');
   const [filterSource, setFilterSource] = useState<'all' | 'bookmarked'>('all');
-  const [questionCountInput, setQuestionCountInput] = useState<string>('20');
   
   // Time Duration State: 'unlimited' | 'seconds' | 'minutes'
   const [timeMode, setTimeMode] = useState<'unlimited' | 'seconds' | 'minutes'>('minutes');
@@ -67,9 +70,17 @@ export default function CustomPracticeBuilder() {
     setTimeout(() => setToastMsg(null), 3500);
   };
 
-  // Load subjects & candidate's saved modules on mount
+  // Subscribe to user's individual question bookmarks
   useEffect(() => {
-    const subjs = getAvailableBuilderSubjects();
+    const unsub = subscribeToUserBookmarks(user?.uid || '', (list) => {
+      setUserBookmarkedIds(new Set(list.map(b => b.questionId)));
+    });
+    return () => unsub();
+  }, [user?.uid]);
+
+  // Load subjects & candidate's saved modules on mount or when subjects update
+  useEffect(() => {
+    const subjs = getAvailableBuilderSubjects(subjects);
     setAvailableSubjects(subjs);
 
     if (user?.uid) {
@@ -81,22 +92,59 @@ export default function CustomPracticeBuilder() {
     } else {
       setLoadingModules(false);
     }
-  }, [user?.uid]);
+  }, [user?.uid, subjects]);
 
-  // Total matching questions available for currently selected subjects in form
-  const currentMatchingPool = buildCustomQuestionPool(selectedSubjectIds, filterSource, 9999);
-  const totalAvailableInForm = currentMatchingPool.length;
+  // Combined bookmarked question IDs across both local folder bookmarks and user Firestore bookmarks
+  const combinedBookmarkedIds = useMemo(() => {
+    const combined = new Set<string>(getBookmarkedQuestionIds());
+    userBookmarkedIds.forEach(id => combined.add(id));
+    return combined;
+  }, [userBookmarkedIds]);
+
+  // Helper: available question count for a specific subject matching current filterSource
+  const getAvailableForSubject = (subjId: string): number => {
+    const subj = availableSubjects.find(s => s.id === subjId);
+    if (!subj) return 0;
+    if (filterSource === 'all') {
+      return subj.questions.length || subj.questionCount || 0;
+    }
+    return subj.questions.filter(q => combinedBookmarkedIds.has(q.id)).length;
+  };
+
+  // Compute sanitized numeric per-subject counts & total requested questions
+  const numericSubjectCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    selectedSubjectIds.forEach(subjId => {
+      const avail = getAvailableForSubject(subjId);
+      const raw = parseInt(subjectCounts[subjId] || '0', 10);
+      const val = isNaN(raw) ? 0 : Math.max(0, Math.min(raw, avail));
+      if (val > 0) {
+        map[subjId] = val;
+      }
+    });
+    return map;
+  }, [selectedSubjectIds, subjectCounts, availableSubjects, filterSource, combinedBookmarkedIds]);
+
+  const totalRequestedQuestions = useMemo(() => {
+    return Object.values<number>(numericSubjectCounts).reduce((sum: number, n: number) => sum + n, 0);
+  }, [numericSubjectCounts]);
+
+  const totalAvailableInForm = useMemo(() => {
+    return selectedSubjectIds.reduce((sum, id) => sum + getAvailableForSubject(id), 0);
+  }, [selectedSubjectIds, availableSubjects, filterSource, combinedBookmarkedIds]);
 
   // Open creation modal
   const handleOpenCreateModal = () => {
     setEditingModuleId(null);
     setTitle(`Custom Practice Module #${savedModules.length + 1}`);
-    setSelectedSubjectIds(availableSubjects.map(s => s.id));
-    setMode('practice');
     setFilterSource('all');
-    setQuestionCountInput('20');
+    setMode('practice');
     setTimeMode('minutes');
     setCustomTimeValue('15');
+
+    // Reset selection & counts cleanly so user picks subjects and enters counts
+    setSelectedSubjectIds([]);
+    setSubjectCounts({});
     setIsModalOpen(true);
   };
 
@@ -104,10 +152,28 @@ export default function CustomPracticeBuilder() {
   const handleOpenEditModal = (mod: CustomPracticeModule) => {
     setEditingModuleId(mod.id);
     setTitle(mod.title);
-    setSelectedSubjectIds(mod.selectedSubjectIds || []);
+    const modSubjIds = mod.selectedSubjectIds || [];
+    setSelectedSubjectIds(modSubjIds);
     setMode(mod.mode || 'practice');
     setFilterSource(mod.filterSource || 'all');
-    setQuestionCountInput(String(mod.questionCount || 20));
+
+    const initialCounts: Record<string, string> = {};
+    if (mod.subjectCounts && Object.keys(mod.subjectCounts).length > 0) {
+      modSubjIds.forEach(id => {
+        initialCounts[id] = String(mod.subjectCounts?.[id] ?? 0);
+      });
+    } else if (modSubjIds.length > 0) {
+      // Legacy module fallback: distribute total questionCount across selected subjects
+      const total = Math.max(1, mod.questionCount || 10);
+      const base = Math.floor(total / modSubjIds.length);
+      let remainder = total % modSubjIds.length;
+      modSubjIds.forEach(id => {
+        const extra = remainder > 0 ? 1 : 0;
+        if (remainder > 0) remainder--;
+        initialCounts[id] = String(base + extra);
+      });
+    }
+    setSubjectCounts(initialCounts);
 
     if (mod.isUnlimitedTime || mod.timeDurationMinutes === 0) {
       setTimeMode('unlimited');
@@ -125,16 +191,63 @@ export default function CustomPracticeBuilder() {
 
   // Toggle subject selection in modal form
   const handleToggleSubject = (subId: string) => {
-    setSelectedSubjectIds(prev => 
-      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
-    );
+    const isCurrentlySelected = selectedSubjectIds.includes(subId);
+    if (isCurrentlySelected) {
+      setSelectedSubjectIds(prev => prev.filter(id => id !== subId));
+    } else {
+      const avail = getAvailableForSubject(subId);
+      setSelectedSubjectIds(prev => [...prev, subId]);
+      setSubjectCounts(prev => {
+        const currentVal = parseInt(prev[subId] || '0', 10);
+        if (!currentVal || currentVal <= 0) {
+          return { ...prev, [subId]: String(avail > 0 ? Math.min(10, avail) : 0) };
+        }
+        return prev;
+      });
+    }
+  };
+
+  // Update count for a specific subject (auto-selects subject if count > 0)
+  const handleSubjectCountChange = (subId: string, rawValue: string) => {
+    const sanitized = rawValue.replace(/[^\d]/g, '');
+    setSubjectCounts(prev => ({ ...prev, [subId]: sanitized }));
+
+    const parsed = parseInt(sanitized || '0', 10);
+    if (parsed > 0 && !selectedSubjectIds.includes(subId)) {
+      setSelectedSubjectIds(prev => [...prev, subId]);
+    }
+  };
+
+  // Step count up/down or set All for a subject
+  const handleSetSubjectCount = (subId: string, nextVal: number) => {
+    const avail = getAvailableForSubject(subId);
+    const clamped = Math.max(0, Math.min(nextVal, avail));
+    setSubjectCounts(prev => ({ ...prev, [subId]: String(clamped) }));
+    if (clamped > 0 && !selectedSubjectIds.includes(subId)) {
+      setSelectedSubjectIds(prev => [...prev, subId]);
+    } else if (clamped === 0 && selectedSubjectIds.includes(subId)) {
+      setSelectedSubjectIds(prev => prev.filter(id => id !== subId));
+    }
   };
 
   const handleSelectAllSubjects = () => {
-    if (selectedSubjectIds.length === availableSubjects.length) {
+    const selectable = availableSubjects.filter(s => getAvailableForSubject(s.id) > 0);
+    if (selectedSubjectIds.length === selectable.length && selectable.length > 0) {
       setSelectedSubjectIds([]);
     } else {
-      setSelectedSubjectIds(availableSubjects.map(s => s.id));
+      const nextIds = selectable.map(s => s.id);
+      setSelectedSubjectIds(nextIds);
+      setSubjectCounts(prev => {
+        const next = { ...prev };
+        selectable.forEach(s => {
+          const avail = getAvailableForSubject(s.id);
+          const existing = parseInt(next[s.id] || '0', 10);
+          if (!existing || existing <= 0) {
+            next[s.id] = String(Math.min(10, avail));
+          }
+        });
+        return next;
+      });
     }
   };
 
@@ -159,7 +272,7 @@ export default function CustomPracticeBuilder() {
   // Save / Submit Custom Module
   const handleSaveModule = async (launchImmediately: boolean = false) => {
     if (selectedSubjectIds.length === 0) {
-      showToast('Please select at least one subject.');
+      showToast('Please select at least one subject and enter a question count.');
       return;
     }
 
@@ -168,18 +281,37 @@ export default function CustomPracticeBuilder() {
       return;
     }
 
-    const parsedCount = Math.max(1, parseInt(questionCountInput) || 20);
-    const finalQuestions = buildCustomQuestionPool(selectedSubjectIds, filterSource, parsedCount);
+    const activeSubjectIds = Object.keys(numericSubjectCounts).filter(id => numericSubjectCounts[id] > 0);
+    if (activeSubjectIds.length === 0 || totalRequestedQuestions === 0) {
+      showToast('Please enter at least 1 question for your selected subject(s).');
+      return;
+    }
+
+    const finalQuestions = buildCustomQuestionPool(
+      activeSubjectIds,
+      filterSource,
+      totalRequestedQuestions,
+      subjects,
+      numericSubjectCounts,
+      userBookmarkedIds
+    );
+
+    if (finalQuestions.length === 0) {
+      showToast('No questions available matching your selection criteria.');
+      return;
+    }
+
     const timeSettings = getNormalizedTimeSettings();
 
     const selectedSubjNames = availableSubjects
-      .filter(s => selectedSubjectIds.includes(s.id))
+      .filter(s => activeSubjectIds.includes(s.id))
       .map(s => s.name);
 
     const payloadData = {
       title: title.trim() || 'Custom Practice Module',
-      selectedSubjectIds,
+      selectedSubjectIds: activeSubjectIds,
       selectedSubjectNames: selectedSubjNames,
+      subjectCounts: numericSubjectCounts,
       filterSource,
       questionCount: finalQuestions.length,
       timeDurationMinutes: timeSettings.timeDurationMinutes,
@@ -213,7 +345,14 @@ export default function CustomPracticeBuilder() {
 
   // Launch Exam Runner
   const handleLaunchModule = (mod: CustomPracticeModule, precomputedQuestions?: any[]) => {
-    const questionsPool = precomputedQuestions || buildCustomQuestionPool(mod.selectedSubjectIds, mod.filterSource, mod.questionCount);
+    const questionsPool = precomputedQuestions || buildCustomQuestionPool(
+      mod.selectedSubjectIds,
+      mod.filterSource,
+      mod.questionCount,
+      subjects,
+      mod.subjectCounts,
+      userBookmarkedIds
+    );
 
     if (questionsPool.length === 0) {
       showToast('No questions available in this custom module pool.');
@@ -260,6 +399,8 @@ export default function CustomPracticeBuilder() {
     );
   });
 
+  const selectableCount = availableSubjects.filter(s => getAvailableForSubject(s.id) > 0).length;
+
   return (
     <div className="space-y-8">
       {/* Toast Banner */}
@@ -291,7 +432,7 @@ export default function CustomPracticeBuilder() {
             <span>Custom Practice Modules</span>
           </h2>
           <p className="text-xs sm:text-sm text-blue-200/90 font-medium max-w-xl leading-relaxed">
-            Create personalized practice exams by selecting target subjects, question counts, execution modes, and custom time limits from 30 seconds to unlimited time.
+            Build personalized practice exams by selecting duration or entering a custom time limit, choosing subjects, and entering the exact question count from each subject.
           </p>
         </div>
 
@@ -342,7 +483,7 @@ export default function CustomPracticeBuilder() {
               <p className="text-xs text-slate-500 max-w-md mx-auto">
                 {searchFilter
                   ? `No custom module matches "${searchFilter}".`
-                  : 'Design your own custom practice exams! Mix subjects, choose target question count, and set custom durations from 30 seconds to unlimited time.'}
+                  : 'Design your own custom practice exams! Select your duration or enter a custom timer, pick subjects, enter how many questions you need from each subject, and create it.'}
               </p>
             </div>
             {!searchFilter && (
@@ -412,7 +553,7 @@ export default function CustomPracticeBuilder() {
                     {/* Meta Specs */}
                     <div className="space-y-2 bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 text-xs font-semibold text-slate-700">
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-400 text-[11px]">Questions:</span>
+                        <span className="text-slate-400 text-[11px]">Total Questions:</span>
                         <span className="font-black text-slate-900">{mod.questionCount} Qs</span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -430,20 +571,24 @@ export default function CustomPracticeBuilder() {
                       </div>
                     </div>
 
-                    {/* Selected Subjects Tags */}
+                    {/* Selected Subjects Tags with Per-Subject Counts */}
                     <div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1">
-                        Subjects ({mod.selectedSubjectNames.length})
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block mb-1.5">
+                        Subjects Breakdown ({mod.selectedSubjectNames.length})
                       </span>
-                      <div className="flex flex-wrap gap-1">
-                        {mod.selectedSubjectNames.slice(0, 3).map((name, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[10px] font-bold">
-                            {name}
-                          </span>
-                        ))}
-                        {mod.selectedSubjectNames.length > 3 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {mod.selectedSubjectIds.slice(0, 4).map((subjId, i) => {
+                          const name = mod.selectedSubjectNames[i] || availableSubjects.find(s => s.id === subjId)?.name || subjId;
+                          const cnt = mod.subjectCounts?.[subjId];
+                          return (
+                            <span key={subjId} className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md text-[10px] font-bold border border-slate-200/70">
+                              {name}{cnt ? ` (${cnt})` : ''}
+                            </span>
+                          );
+                        })}
+                        {mod.selectedSubjectIds.length > 4 && (
                           <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md text-[10px] font-black">
-                            +{mod.selectedSubjectNames.length - 3} more
+                            +{mod.selectedSubjectIds.length - 4} more
                           </span>
                         )}
                       </div>
@@ -485,7 +630,7 @@ export default function CustomPracticeBuilder() {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 flex flex-col max-h-[90vh] overflow-hidden"
+              className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 z-10 flex flex-col max-h-[92vh] overflow-hidden"
             >
               {/* Modal Header */}
               <div className="p-6 bg-slate-900 text-white flex items-center justify-between gap-4 shrink-0">
@@ -498,7 +643,7 @@ export default function CustomPracticeBuilder() {
                       {editingModuleId ? 'Edit Custom Module' : 'Create Custom Practice Module'}
                     </h3>
                     <p className="text-xs text-slate-300 font-medium">
-                      Configure your subjects, question counts, study mode, and time limits.
+                      Select or enter duration, pick subjects, enter how many questions you need from each subject, and create.
                     </p>
                   </div>
                 </div>
@@ -524,7 +669,7 @@ export default function CustomPracticeBuilder() {
                       type="text"
                       value={title}
                       onChange={e => setTitle(e.target.value)}
-                      placeholder="e.g. Cardiology & Surgery Rapid Drill"
+                      placeholder="e.g. Anatomy & Physiology Rapid Drill"
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-900 outline-none focus:border-blue-500 focus:bg-white transition-all"
                     />
                   </div>
@@ -569,153 +714,19 @@ export default function CustomPracticeBuilder() {
                   </div>
                 </div>
 
-                {/* 2. Select Subjects */}
-                <div className="space-y-3 pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
+                {/* 2. Duration Selection or Custom Entry */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-                      Select Subjects ({selectedSubjectIds.length} / {availableSubjects.length})
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={handleSelectAllSubjects}
-                      className="text-xs font-extrabold text-blue-600 hover:underline cursor-pointer"
-                    >
-                      {selectedSubjectIds.length === availableSubjects.length ? 'Deselect All' : 'Select All'}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto p-1 border border-slate-200/80 rounded-2xl bg-slate-50/50">
-                    {availableSubjects.map(s => {
-                      const isSelected = selectedSubjectIds.includes(s.id);
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() => handleToggleSubject(s.id)}
-                          className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
-                            isSelected
-                              ? 'bg-white border-blue-500 text-blue-950 font-bold shadow-2xs'
-                              : 'bg-white/60 border-slate-200 text-slate-600 hover:bg-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
-                              isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'border-slate-300 bg-white'
-                            }`}>
-                              {isSelected && <Check size={10} />}
-                            </div>
-                            <span className="text-xs font-bold truncate">{s.name}</span>
-                          </div>
-                          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">
-                            {s.questionCount} Qs
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 3. Question Source & Count */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-                  {/* Source Filter */}
-                  <div className="space-y-1.5">
-                    <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-                      Question Source Filter
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setFilterSource('all')}
-                        className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          filterSource === 'all'
-                            ? 'bg-slate-900 text-white border-slate-900'
-                            : 'bg-slate-50 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        <BookOpen size={14} />
-                        <span>All Questions</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setFilterSource('bookmarked')}
-                        className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                          filterSource === 'bookmarked'
-                            ? 'bg-amber-500 text-white border-amber-500'
-                            : 'bg-slate-50 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        <Star size={14} className="fill-current" />
-                        <span>Bookmarked Only</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Question Count with Custom Entry */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-                        Question Count
-                      </label>
-                      <span className="text-[10px] font-bold text-slate-400">Available: {totalAvailableInForm} Qs</span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={totalAvailableInForm || 500}
-                        value={questionCountInput}
-                        onChange={e => setQuestionCountInput(e.target.value)}
-                        placeholder="e.g. 25"
-                        className="w-28 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black text-slate-900 outline-none focus:border-blue-500"
-                      />
-
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {['5', '10', '20', '30', '50'].map(cnt => (
-                          <button
-                            key={cnt}
-                            type="button"
-                            onClick={() => setQuestionCountInput(cnt)}
-                            className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black cursor-pointer border ${
-                              questionCountInput === cnt
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
-                            }`}
-                          >
-                            {cnt} Qs
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Time Duration (Custom Entry from 30 Sec to Unlimited) */}
-                <div className="space-y-3 pt-2 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
-                      Exam Time Limit (30 sec – Unlimited)
+                      1. Select Duration or Enter Custom Duration
                     </label>
                     <span className="text-xs font-black text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200">
-                      Configured: {getNormalizedTimeSettings().displayLabel}
+                      Duration: {getNormalizedTimeSettings().displayLabel}
                     </span>
                   </div>
 
-                  {/* Time Mode Radio Options */}
+                  {/* Time Mode Tabs */}
                   <div className="grid grid-cols-3 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setTimeMode('unlimited')}
-                      className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        timeMode === 'unlimited'
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                          : 'bg-slate-50 text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      <span>♾️ Unlimited Time</span>
-                    </button>
-
                     <button
                       type="button"
                       onClick={() => {
@@ -729,14 +740,14 @@ export default function CustomPracticeBuilder() {
                       }`}
                     >
                       <Clock size={14} />
-                      <span>Minutes Limit</span>
+                      <span>Minutes</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => {
                         setTimeMode('seconds');
-                        if (!customTimeValue || parseFloat(customTimeValue) < 30) setCustomTimeValue('30');
+                        if (!customTimeValue || parseFloat(customTimeValue) < 30) setCustomTimeValue('60');
                       }}
                       className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                         timeMode === 'seconds'
@@ -745,16 +756,65 @@ export default function CustomPracticeBuilder() {
                       }`}
                     >
                       <Zap size={14} />
-                      <span>Seconds Limit</span>
+                      <span>Seconds</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setTimeMode('unlimited')}
+                      className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        timeMode === 'unlimited'
+                          ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <span>Unlimited Time</span>
                     </button>
                   </div>
 
-                  {/* Custom Numeric Time Input & Quick Presets */}
+                  {/* Select Preset OR Enter Custom Duration */}
                   {timeMode !== 'unlimited' && (
                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 space-y-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider mr-1">
+                          Select Duration:
+                        </span>
+                        {timeMode === 'seconds' ? (
+                          ['30', '45', '60', '90', '120'].map(sec => (
+                            <button
+                              key={sec}
+                              type="button"
+                              onClick={() => setCustomTimeValue(sec)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black cursor-pointer border transition-colors ${
+                                customTimeValue === sec
+                                  ? 'bg-indigo-600 text-white border-indigo-600'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {sec} Sec
+                            </button>
+                          ))
+                        ) : (
+                          ['5', '10', '15', '20', '30', '45', '60', '90'].map(min => (
+                            <button
+                              key={min}
+                              type="button"
+                              onClick={() => setCustomTimeValue(min)}
+                              className={`px-2.5 py-1.5 rounded-lg text-[11px] font-black cursor-pointer border transition-colors ${
+                                customTimeValue === min
+                                  ? 'bg-blue-600 text-white border-blue-600'
+                                  : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {min} Min
+                            </button>
+                          ))
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-3 pt-2 border-t border-slate-200/70">
                         <label className="text-xs font-black text-slate-700 shrink-0">
-                          Enter {timeMode === 'minutes' ? 'Minutes' : 'Seconds'}:
+                          Or Enter Duration ({timeMode === 'minutes' ? 'Minutes' : 'Seconds'}):
                         </label>
                         <input
                           type="number"
@@ -762,56 +822,186 @@ export default function CustomPracticeBuilder() {
                           min={timeMode === 'minutes' ? 0.5 : 30}
                           value={customTimeValue}
                           onChange={e => setCustomTimeValue(e.target.value)}
-                          placeholder={timeMode === 'minutes' ? 'e.g. 15' : 'e.g. 45'}
+                          placeholder={timeMode === 'minutes' ? 'e.g. 25' : 'e.g. 75'}
                           className="w-32 px-3.5 py-2 bg-white border border-slate-300 rounded-xl text-xs font-black text-slate-900 outline-none focus:border-blue-500"
                         />
                         <span className="text-xs font-bold text-slate-500">
-                          {timeMode === 'minutes' ? 'min' : 'sec'}
+                          {timeMode === 'minutes' ? 'minutes' : 'seconds'}
                         </span>
-                      </div>
-
-                      {/* Quick Presets */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-200/60">
-                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mr-1">Quick Presets:</span>
-                        {timeMode === 'seconds' ? (
-                          <>
-                            {['30', '45', '60', '90', '120'].map(sec => (
-                              <button
-                                key={sec}
-                                type="button"
-                                onClick={() => setCustomTimeValue(sec)}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black cursor-pointer border ${
-                                  customTimeValue === sec
-                                    ? 'bg-indigo-600 text-white border-indigo-600'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                {sec} Sec
-                              </button>
-                            ))}
-                          </>
-                        ) : (
-                          <>
-                            {['1', '5', '10', '15', '30', '60'].map(min => (
-                              <button
-                                key={min}
-                                type="button"
-                                onClick={() => setCustomTimeValue(min)}
-                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black cursor-pointer border ${
-                                  customTimeValue === min
-                                    ? 'bg-blue-600 text-white border-blue-600'
-                                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                {min} Min
-                              </button>
-                            ))}
-                          </>
-                        )}
                       </div>
                     </div>
                   )}
+                </div>
 
+                {/* 3. Question Source Filter */}
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
+                    2. Question Source
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setFilterSource('all')}
+                      className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        filterSource === 'all'
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <BookOpen size={14} />
+                      <span>All Question Bank Questions</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setFilterSource('bookmarked')}
+                      className={`p-3 rounded-xl border text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                        filterSource === 'bookmarked'
+                          ? 'bg-amber-500 text-white border-amber-500'
+                          : 'bg-slate-50 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      <Star size={14} className="fill-current" />
+                      <span>Bookmarked Questions Only</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4. Select Subjects & Enter Question Count Per Subject */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <label className="block text-xs font-black text-slate-800 uppercase tracking-wider">
+                        3. Select Subjects & Enter Question Count Per Subject
+                      </label>
+                      <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                        Select each subject you want to include and enter how many questions to pull from it.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-black">
+                        {selectedSubjectIds.length} Subjects • {totalRequestedQuestions} Questions Total
+                      </span>
+
+                      {selectableCount > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSelectAllSubjects}
+                          className="text-xs font-extrabold text-blue-600 hover:underline cursor-pointer"
+                        >
+                          {selectedSubjectIds.length === selectableCount ? 'Deselect All' : 'Select All'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {availableSubjects.length === 0 ? (
+                    <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500 font-semibold">
+                      No subjects available in the Question Bank yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-64 overflow-y-auto p-2 border border-slate-200/80 rounded-2xl bg-slate-50/60">
+                      {availableSubjects.map(s => {
+                        const avail = getAvailableForSubject(s.id);
+                        const isSelected = selectedSubjectIds.includes(s.id);
+                        const rawCountStr = subjectCounts[s.id] ?? '';
+                        const parsedCount = parseInt(rawCountStr || '0', 10);
+                        const exceedsMax = isSelected && parsedCount > avail;
+
+                        return (
+                          <div
+                            key={s.id}
+                            className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                              isSelected
+                                ? 'bg-white border-blue-500 shadow-2xs'
+                                : avail === 0
+                                  ? 'bg-slate-100/70 border-slate-200/70 opacity-60'
+                                  : 'bg-white/80 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            {/* Left: Checkbox + Subject Name + Available Count */}
+                            <div
+                              onClick={() => avail > 0 && handleToggleSubject(s.id)}
+                              className={`flex items-center gap-3 min-w-0 flex-1 ${avail > 0 ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                            >
+                              <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                                isSelected
+                                  ? 'bg-blue-600 border-blue-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}>
+                                {isSelected && <Check size={12} strokeWidth={3} />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className={`text-xs font-extrabold truncate ${isSelected ? 'text-blue-950' : 'text-slate-800'}`}>
+                                  {s.name}
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400">
+                                  {avail} {avail === 1 ? 'question' : 'questions'} available
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Right: Per-Subject Question Count Controls */}
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                              {exceedsMax && (
+                                <span className="text-[10px] font-bold text-amber-600 flex items-center gap-1 mr-1">
+                                  <AlertCircle size={12} />
+                                  Max {avail}
+                                </span>
+                              )}
+
+                              <span className="text-[10px] font-extrabold text-slate-500 uppercase">Count:</span>
+
+                              <button
+                                type="button"
+                                disabled={avail === 0}
+                                onClick={() => handleSetSubjectCount(s.id, (isNaN(parsedCount) ? 0 : parsedCount) - 1)}
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center text-slate-700 cursor-pointer"
+                                title="Decrease count"
+                              >
+                                <Minus size={12} />
+                              </button>
+
+                              <input
+                                type="number"
+                                min={0}
+                                max={avail}
+                                disabled={avail === 0}
+                                value={isSelected ? rawCountStr : ''}
+                                placeholder="0"
+                                onChange={e => handleSubjectCountChange(s.id, e.target.value)}
+                                className={`w-16 px-2 py-1.5 text-center rounded-xl border text-xs font-black outline-none transition-all ${
+                                  isSelected
+                                    ? 'bg-blue-50/50 border-blue-400 text-blue-950 focus:border-blue-600'
+                                    : 'bg-slate-50 border-slate-200 text-slate-700 focus:border-blue-500 focus:bg-white'
+                                }`}
+                              />
+
+                              <button
+                                type="button"
+                                disabled={avail === 0 || (isSelected && parsedCount >= avail)}
+                                onClick={() => handleSetSubjectCount(s.id, (isSelected && !isNaN(parsedCount) ? parsedCount : 0) + 1)}
+                                className="w-7 h-7 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 flex items-center justify-center text-slate-700 cursor-pointer"
+                                title="Increase count"
+                              >
+                                <Plus size={12} />
+                              </button>
+
+                              <button
+                                type="button"
+                                disabled={avail === 0}
+                                onClick={() => handleSetSubjectCount(s.id, avail)}
+                                className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 text-[10px] font-black text-slate-600 disabled:opacity-40 cursor-pointer transition-colors"
+                              >
+                                Max ({avail})
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -831,7 +1021,7 @@ export default function CustomPracticeBuilder() {
                     onClick={() => handleSaveModule(false)}
                     className="w-full sm:w-auto px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs rounded-2xl transition-all shadow-sm cursor-pointer"
                   >
-                    {editingModuleId ? 'Save Changes' : 'Save Module to List'}
+                    {editingModuleId ? 'Save Changes' : `Create Module (${totalRequestedQuestions} Qs)`}
                   </button>
 
                   <button
@@ -840,7 +1030,7 @@ export default function CustomPracticeBuilder() {
                     className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-2xl transition-all shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Play size={15} fill="currentColor" />
-                    <span>Save & Start Practice Exam Now</span>
+                    <span>Create & Start Practice Now</span>
                   </button>
                 </div>
               </div>
@@ -851,3 +1041,4 @@ export default function CustomPracticeBuilder() {
     </div>
   );
 }
+

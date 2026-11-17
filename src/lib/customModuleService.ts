@@ -15,6 +15,7 @@ export interface CustomPracticeModule {
   description?: string;
   selectedSubjectIds: string[];
   selectedSubjectNames: string[];
+  subjectCounts?: Record<string, number>; // Exact count requested per subject ID
   filterSource: 'all' | 'bookmarked';
   questionCount: number;
   timeDurationMinutes: number; // 0 for untimed/unlimited
@@ -31,7 +32,28 @@ const CUSTOM_MODULES_STORAGE_KEY = 'promedo_user_custom_modules_';
 /**
  * Get all available subjects with question counts for the custom practice builder.
  */
-export function getAvailableBuilderSubjects(): { id: string; name: string; questionCount: number; questions: QuestionItem[] }[] {
+export function getAvailableBuilderSubjects(
+  sourceSubjects?: PracticeSubject[]
+): { id: string; name: string; questionCount: number; questions: QuestionItem[] }[] {
+  if (sourceSubjects && sourceSubjects.length > 0) {
+    return sourceSubjects.map(s => ({
+      id: s.id,
+      name: s.name,
+      questionCount: s.questions?.length ?? s.questionCount ?? 0,
+      questions: (s.questions || []).map(q => ({
+        id: q.id,
+        subjectId: s.id,
+        subjectName: s.name,
+        text: q.text,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        imageUrl: q.imageUrl,
+        createdAt: q.createdAt
+      }))
+    }));
+  }
+
   const folders = getQuestionFolders().filter(f => f.isActive !== false);
   return folders.map(f => ({
     id: f.id,
@@ -41,51 +63,103 @@ export function getAvailableBuilderSubjects(): { id: string; name: string; quest
   }));
 }
 
+function shuffleArray<T>(items: T[]): T[] {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 /**
  * Build a pool of questions matching custom module filter criteria.
+ * Supports per-subject counts via `subjectCounts`, or a global `targetQuestionCount`.
  */
 export function buildCustomQuestionPool(
   selectedSubjectIds: string[],
   filterSource: 'all' | 'bookmarked' = 'all',
-  targetQuestionCount: number = 20
+  targetQuestionCount: number = 20,
+  sourceSubjects?: PracticeSubject[],
+  subjectCounts?: Record<string, number>,
+  extraBookmarkedIds?: Set<string>
 ): SubjectQuestion[] {
-  const folders = getQuestionFolders().filter(f => f.isActive !== false);
   const bookmarkedIds = new Set(getBookmarkedQuestionIds());
-
-  // Filter folders matching selected IDs (or all if empty)
-  const targetFolders = selectedSubjectIds.length > 0
-    ? folders.filter(f => selectedSubjectIds.includes(f.id))
-    : folders;
-
-  let pool: SubjectQuestion[] = [];
-
-  targetFolders.forEach(folder => {
-    (folder.selectedQuestions || []).forEach(q => {
-      if (filterSource === 'bookmarked' && !bookmarkedIds.has(q.id)) {
-        return; // Skip if looking for bookmarked only and not bookmarked
-      }
-
-      pool.push({
-        id: q.id,
-        subjectId: folder.id,
-        subjectName: folder.name,
-        text: q.text,
-        options: Array.isArray(q.options) ? q.options : [],
-        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-        explanation: q.explanation || '',
-        imageUrl: q.imageUrl
-      });
-    });
-  });
-
-  // Fisher-Yates shuffle pool
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  if (extraBookmarkedIds) {
+    extraBookmarkedIds.forEach(id => bookmarkedIds.add(id));
   }
 
-  // Slice to target question count
+  // Group available matching questions by subjectId
+  const questionsBySubject = new Map<string, SubjectQuestion[]>();
+
+  if (sourceSubjects && sourceSubjects.length > 0) {
+    const targetSubjects = selectedSubjectIds.length > 0
+      ? sourceSubjects.filter(s => selectedSubjectIds.includes(s.id))
+      : sourceSubjects;
+
+    targetSubjects.forEach(subj => {
+      const list: SubjectQuestion[] = [];
+      (subj.questions || []).forEach(q => {
+        if (filterSource === 'bookmarked' && !bookmarkedIds.has(q.id)) {
+          return;
+        }
+        list.push({
+          id: q.id,
+          subjectId: subj.id,
+          subjectName: subj.name,
+          text: q.text,
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+          explanation: q.explanation || '',
+          imageUrl: q.imageUrl
+        });
+      });
+      questionsBySubject.set(subj.id, list);
+    });
+  } else {
+    const folders = getQuestionFolders().filter(f => f.isActive !== false);
+    const targetFolders = selectedSubjectIds.length > 0
+      ? folders.filter(f => selectedSubjectIds.includes(f.id))
+      : folders;
+
+    targetFolders.forEach(folder => {
+      const list: SubjectQuestion[] = [];
+      (folder.selectedQuestions || []).forEach(q => {
+        if (filterSource === 'bookmarked' && !bookmarkedIds.has(q.id)) {
+          return;
+        }
+        list.push({
+          id: q.id,
+          subjectId: folder.id,
+          subjectName: folder.name,
+          text: q.text,
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+          explanation: q.explanation || '',
+          imageUrl: q.imageUrl
+        });
+      });
+      questionsBySubject.set(folder.id, list);
+    });
+  }
+
+  // Per-subject count sampling when subjectCounts map is supplied
+  if (subjectCounts && Object.keys(subjectCounts).length > 0) {
+    const combined: SubjectQuestion[] = [];
+    selectedSubjectIds.forEach(subjId => {
+      const requested = Math.max(0, Math.floor(subjectCounts[subjId] || 0));
+      if (requested <= 0) return;
+      const subjPool = shuffleArray(questionsBySubject.get(subjId) || []);
+      combined.push(...subjPool.slice(0, requested));
+    });
+    return shuffleArray(combined);
+  }
+
+  // Fallback: single global count across all selected subjects
+  const allPool: SubjectQuestion[] = [];
+  questionsBySubject.forEach(list => allPool.push(...list));
+  const shuffled = shuffleArray(allPool);
+
   if (targetQuestionCount > 0 && targetQuestionCount < shuffled.length) {
     return shuffled.slice(0, targetQuestionCount);
   }

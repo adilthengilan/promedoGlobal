@@ -15,8 +15,8 @@ import { db } from './firebase';
 import { 
   getQuestionFolders, 
   subscribeToQuestionFolders, 
-  QuestionFolder, 
-  QuestionItem 
+  fetchAllSubjectBuilderQuestions,
+  QuestionFolder 
 } from './questionFolders';
 
 export interface PracticeSubject {
@@ -27,6 +27,7 @@ export interface PracticeSubject {
   details?: string;
   questionCount: number;
   isListed: boolean;
+  source?: 'builder' | 'folder';
   createdAt?: string;
   updatedAt?: string;
   questions?: SubjectQuestion[];
@@ -103,7 +104,8 @@ function mapFolderToSubject(folder: QuestionFolder): PracticeSubject {
     options: Array.isArray(q.options) ? q.options : [],
     correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
     explanation: q.explanation || '',
-    imageUrl: q.imageUrl
+    imageUrl: q.imageUrl,
+    createdAt: q.createdAt
   }));
 
   return {
@@ -114,6 +116,7 @@ function mapFolderToSubject(folder: QuestionFolder): PracticeSubject {
     details: folder.description || '',
     questionCount: qs.length || (folder.selectedQuestionIds || []).length,
     isListed: folder.isActive !== false,
+    source: 'folder',
     createdAt: folder.createdAt,
     updatedAt: folder.updatedAt,
     questions: qs
@@ -121,45 +124,172 @@ function mapFolderToSubject(folder: QuestionFolder): PracticeSubject {
 }
 
 /**
- * Fetch all listed subjects strictly from Admin side App Pages -> Question Bank (questionFolders).
+ * Map Question Builder subjects & questions to PracticeSubject[]
  */
-export async function fetchListedSubjects(isAdmin: boolean = false): Promise<PracticeSubject[]> {
-  const folders = getQuestionFolders();
-  let subjects = folders.map(mapFolderToSubject);
+async function fetchBuilderSubjectsWithQuestions(): Promise<PracticeSubject[]> {
+  try {
+    const { subjects, questions } = await fetchAllSubjectBuilderQuestions();
+    const bySubject = new Map<string, SubjectQuestion[]>();
 
-  if (!isAdmin) {
-    subjects = subjects.filter(s => s.isListed);
+    questions.forEach(q => {
+      const list = bySubject.get(q.subjectId) || [];
+      list.push({
+        id: q.id,
+        subjectId: q.subjectId,
+        subjectName: q.subjectName,
+        text: q.text,
+        options: Array.isArray(q.options) ? q.options : [],
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        explanation: q.explanation || '',
+        imageUrl: q.imageUrl,
+        createdAt: q.createdAt
+      });
+      bySubject.set(q.subjectId, list);
+    });
+
+    return subjects.map(s => {
+      const qs = bySubject.get(s.id) || [];
+      return {
+        id: s.id,
+        name: s.name,
+        description: s.details || '',
+        details: s.details || '',
+        questionCount: qs.length,
+        isListed: true,
+        source: 'builder',
+        createdAt: s.createdAt,
+        questions: qs
+      };
+    });
+  } catch (err) {
+    console.warn('Could not load Question Builder subjects:', err);
+    return [];
   }
-
-  return subjects;
 }
 
 /**
- * Real-time listener for App Pages Question Bank folders in the Student Portal.
+ * Merge Question Builder subjects with Question Bank Folders cleanly without duplicates.
+ */
+function mergeBuilderAndFolderSubjects(
+  folderSubjects: PracticeSubject[],
+  builderSubjects: PracticeSubject[],
+  isAdmin: boolean
+): PracticeSubject[] {
+  const merged = new Map<string, PracticeSubject>();
+
+  // 1. Add Question Builder subjects first
+  builderSubjects.forEach(b => {
+    merged.set(b.id, b);
+  });
+
+  // 2. Merge / append Question Folders
+  folderSubjects.forEach(f => {
+    if (!isAdmin && !f.isListed) {
+      return;
+    }
+    const existing = merged.get(f.id);
+    if (existing) {
+      // Combine unique questions if both share the same ID
+      const qMap = new Map<string, SubjectQuestion>();
+      (existing.questions || []).forEach(q => qMap.set(q.id, q));
+      (f.questions || []).forEach(q => {
+        if (!qMap.has(q.id)) qMap.set(q.id, q);
+      });
+      const combinedQs = Array.from(qMap.values());
+      merged.set(f.id, {
+        ...existing,
+        ...f,
+        questionCount: combinedQs.length,
+        questions: combinedQs
+      });
+    } else {
+      merged.set(f.id, f);
+    }
+  });
+
+  let result = Array.from(merged.values());
+  if (!isAdmin) {
+    result = result.filter(s => s.isListed);
+  }
+  return result;
+}
+
+/**
+ * Fetch all listed subjects from both Question Builder (`questionBank`) and App Pages (`questionFolders`).
+ */
+export async function fetchListedSubjects(isAdmin: boolean = false): Promise<PracticeSubject[]> {
+  const folders = getQuestionFolders();
+  const folderSubjects = folders.map(mapFolderToSubject);
+  const builderSubjects = await fetchBuilderSubjectsWithQuestions();
+
+  return mergeBuilderAndFolderSubjects(folderSubjects, builderSubjects, isAdmin);
+}
+
+/**
+ * Real-time listener for both Question Builder (`questionBank`) and Question Bank folders (`questionFolders`).
  */
 export function subscribeToListedSubjects(
   onData: (subjects: PracticeSubject[]) => void,
   isAdmin: boolean = false,
   onError?: (err: Error) => void
 ): Unsubscribe {
-  return subscribeToQuestionFolders((folders) => {
-    let subjects = folders.map(mapFolderToSubject);
-    if (!isAdmin) {
-      subjects = subjects.filter(s => s.isListed);
+  let latestFolders: PracticeSubject[] = getQuestionFolders().map(mapFolderToSubject);
+  let latestBuilder: PracticeSubject[] = [];
+  let isDisposed = false;
+
+  const emitMerged = () => {
+    if (isDisposed) return;
+    onData(mergeBuilderAndFolderSubjects(latestFolders, latestBuilder, isAdmin));
+  };
+
+  const refreshBuilderData = async () => {
+    const builderList = await fetchBuilderSubjectsWithQuestions();
+    if (!isDisposed) {
+      latestBuilder = builderList;
+      emitMerged();
     }
-    onData(subjects);
-  });
+  };
+
+  // Initial load from Question Builder
+  refreshBuilderData();
+
+  // Listen to Question Folders
+  const unsubFolders = subscribeToQuestionFolders((folders) => {
+    latestFolders = folders.map(mapFolderToSubject);
+    emitMerged();
+  }, onError);
+
+  // Listen in real-time to Firestore Question Builder (`questionBank`)
+  const unsubBuilder = onSnapshot(
+    collection(db, 'questionBank'),
+    () => {
+      refreshBuilderData();
+    },
+    (err) => {
+      console.warn('subscribeToListedSubjects questionBank notice:', err);
+      refreshBuilderData();
+    }
+  );
+
+  return () => {
+    isDisposed = true;
+    unsubFolders();
+    unsubBuilder();
+  };
 }
 
 /**
- * Fetch questions for a specific Question Bank folder created in Admin App Pages.
+ * Fetch questions for a specific subject from Question Folders OR Question Builder (`questionBank`).
  */
 export async function fetchQuestionsForSubject(
   subjectId: string,
-  subjectName?: string
+  _subjectName?: string
 ): Promise<SubjectQuestion[]> {
   if (!subjectId) return [];
 
+  const qMap = new Map<string, SubjectQuestion>();
+
+  // 1. Check Question Folders
   const folders = getQuestionFolders();
   const matchedFolder = folders.find(f => 
     f.id === subjectId || 
@@ -168,19 +298,76 @@ export async function fetchQuestionsForSubject(
   );
 
   if (matchedFolder) {
-    return (matchedFolder.selectedQuestions || []).map(q => ({
-      id: q.id,
-      subjectId: matchedFolder.id,
-      subjectName: matchedFolder.name,
-      text: q.text,
-      options: Array.isArray(q.options) ? q.options : [],
-      correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
-      explanation: q.explanation || '',
-      imageUrl: q.imageUrl
-    }));
+    (matchedFolder.selectedQuestions || []).forEach(q => {
+      qMap.set(q.id, {
+        id: q.id,
+        subjectId: matchedFolder.id,
+        subjectName: matchedFolder.name,
+        text: q.text,
+        options: Array.isArray(q.options) ? q.options : [],
+        correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+        explanation: q.explanation || '',
+        imageUrl: q.imageUrl,
+        createdAt: q.createdAt
+      });
+    });
   }
 
-  return [];
+  // 2. Check Question Builder (`questionBank/{subjectId}/questions`) in Firestore
+  let resolvedSubjectName = matchedFolder?.name || '';
+  try {
+    const subjDoc = await getDoc(doc(db, 'questionBank', subjectId));
+    if (subjDoc.exists()) {
+      resolvedSubjectName = (subjDoc.data()?.name as string) || resolvedSubjectName;
+    }
+
+    const qSnap = await getDocs(collection(db, `questionBank/${subjectId}/questions`));
+    qSnap.docs.forEach(d => {
+      const data = d.data();
+      if (!qMap.has(d.id)) {
+        qMap.set(d.id, {
+          id: d.id,
+          subjectId,
+          subjectName: resolvedSubjectName || subjectId,
+          text: (data.text as string) || '',
+          options: Array.isArray(data.options) ? data.options : [],
+          correctAnswer: typeof data.correctAnswer === 'number' ? data.correctAnswer : 0,
+          explanation: (data.explanation as string) || '',
+          imageUrl: data.imageUrl as string | undefined,
+          createdAt: data.createdAt as string | undefined
+        });
+      }
+    });
+  } catch (err) {
+    console.warn(`Could not read questionBank/${subjectId}/questions from Firestore:`, err);
+  }
+
+  // 3. Check local_questions_${subjectId} localStorage fallback
+  try {
+    const rawLocal = localStorage.getItem(`local_questions_${subjectId}`);
+    if (rawLocal) {
+      const parsed = JSON.parse(rawLocal);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((q: any) => {
+          if (!qMap.has(q.id)) {
+            qMap.set(q.id, {
+              id: q.id,
+              subjectId,
+              subjectName: resolvedSubjectName || subjectId,
+              text: q.text || '',
+              options: Array.isArray(q.options) ? q.options : [],
+              correctAnswer: typeof q.correctAnswer === 'number' ? q.correctAnswer : 0,
+              explanation: q.explanation || '',
+              imageUrl: q.imageUrl,
+              createdAt: q.createdAt
+            });
+          }
+        });
+      }
+    }
+  } catch (_) {}
+
+  return Array.from(qMap.values());
 }
 
 /**
