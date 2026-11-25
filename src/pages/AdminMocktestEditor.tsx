@@ -38,7 +38,7 @@ interface Question {
 const AdminMocktestEditor = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(id ? true : false);
   const [saving, setSaving] = useState(false);
   
@@ -122,6 +122,14 @@ const AdminMocktestEditor = () => {
       fetchTest();
     }
   }, [id]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

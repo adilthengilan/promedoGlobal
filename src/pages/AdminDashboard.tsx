@@ -31,7 +31,7 @@ interface AppointmentNotification {
 }
 
 const AdminDashboard = () => {
-  const { isAdmin, logout, user } = useAuth();
+  const { isAdmin, loading: authLoading, logout, user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -1115,6 +1115,14 @@ const AdminDashboard = () => {
       console.error('Logout error:', error);
     }
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

@@ -110,22 +110,42 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
         } catch (_) {}
       }
 
-      // Merge user logins into user records if missing
+      // Merge user logins into user records if missing, preferring real Firebase Auth UID docs over synthetic usr_ docs
       const userMap = new Map<string, UserRecord>();
       firestoreUsers.forEach(u => {
-        if (u.email) userMap.set(u.email.toLowerCase(), u);
+        const key = (u.email || u.id).toLowerCase();
+        const existing = userMap.get(key);
+        if (!existing) {
+          userMap.set(key, u);
+        } else {
+          const existingIsSynthetic = existing.id.startsWith('usr_');
+          const currentIsSynthetic = u.id.startsWith('usr_');
+          const mergedRole = (existing.role === 'admin' || u.role === 'admin') ? 'admin' : (u.role || existing.role || 'student');
+          const mergedPaid: 'PAID' | 'UNPAID' = (mergedRole === 'admin' || existing.paymentStatus === 'PAID' || u.paymentStatus === 'PAID') ? 'PAID' : 'UNPAID';
+          const primary = (existingIsSynthetic && !currentIsSynthetic) ? u : existing;
+          const secondary = primary === u ? existing : u;
+          userMap.set(key, {
+            ...secondary,
+            ...primary,
+            id: primary.id,
+            role: mergedRole,
+            paymentStatus: mergedPaid,
+            accessStatus: mergedPaid === 'PAID' ? 'ACTIVE' : 'LOCKED'
+          });
+        }
       });
 
       logins.forEach((l: any) => {
         const key = (l.email || l.id).toLowerCase();
         if (!userMap.has(key)) {
-          const lPaid: 'PAID' | 'UNPAID' = l.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID';
+          const lRole = l.role || 'student';
+          const lPaid: 'PAID' | 'UNPAID' = lRole === 'admin' || l.paymentStatus === 'PAID' ? 'PAID' : 'UNPAID';
           userMap.set(key, {
             id: l.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             name: l.name || 'Candidate',
             email: l.email || '',
             phone: l.phone || '',
-            role: 'student',
+            role: lRole,
             status: 'active',
             paymentStatus: lPaid,
             accessStatus: lPaid === 'PAID' ? 'ACTIVE' : 'LOCKED',
@@ -141,6 +161,11 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
           if (!existing.lastLoginAt && l.lastLoginAt) existing.lastLoginAt = l.lastLoginAt;
           if (!existing.paymentStatus && l.paymentStatus) existing.paymentStatus = l.paymentStatus;
           if (!existing.paymentActivatedAt && l.paymentActivatedAt) existing.paymentActivatedAt = l.paymentActivatedAt;
+          if (l.role === 'admin' && existing.role !== 'admin') {
+            existing.role = 'admin';
+            existing.paymentStatus = 'PAID';
+            existing.accessStatus = 'ACTIVE';
+          }
         }
       });
 
@@ -161,6 +186,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
     const newAccessStatus = targetStatus === 'PAID' ? 'ACTIVE' : 'LOCKED';
     const now = new Date().toISOString();
     const activationDate = targetStatus === 'PAID' ? now : null;
+    const target = users.find(u => u.id === userId);
 
     try {
       await setDoc(doc(db, 'users', userId), {
@@ -170,16 +196,28 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
         updatedAt: now
       }, { merge: true });
 
-      // Also sync to userLogins document if present
-      const target = users.find(u => u.id === userId);
+      // Also sync to any duplicate users docs with same email and userLogins document
       if (target?.email) {
-        const safeKey = target.email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const targetEmail = target.email.toLowerCase();
+        const safeKey = targetEmail.replace(/[^a-z0-9]/g, '_');
         try {
           await setDoc(doc(db, 'userLogins', safeKey), {
             paymentStatus: targetStatus,
             accessStatus: newAccessStatus,
             paymentActivatedAt: activationDate
           }, { merge: true });
+
+          const snap = await getDocs(collection(db, 'users'));
+          await Promise.all(
+            snap.docs
+              .filter(d => d.id !== userId && (d.data().email || '').toLowerCase() === targetEmail)
+              .map(d => setDoc(doc(db, 'users', d.id), {
+                paymentStatus: targetStatus,
+                accessStatus: newAccessStatus,
+                paymentActivatedAt: activationDate,
+                updatedAt: now
+              }, { merge: true }))
+          );
         } catch (_) {}
       }
 
@@ -206,35 +244,69 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
     }
   };
 
-  // Toggle Role
+  // Update User Role (Make Admin / Student / User)
   const handleUpdateRole = async (userId: string, newRole: 'student' | 'admin' | 'user') => {
+    const now = new Date().toISOString();
+    const target = users.find(u => u.id === userId);
+    const isNowAdmin = newRole === 'admin';
+
     try {
-      await updateDoc(doc(db, 'users', userId), {
+      await setDoc(doc(db, 'users', userId), {
+        ...(target?.name ? { name: target.name } : {}),
+        ...(target?.email ? { email: target.email } : {}),
         role: newRole,
-        updatedAt: new Date().toISOString()
-      });
-      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-      if (selectedUser && selectedUser.id === userId) {
-        setSelectedUser(prev => prev ? { ...prev, role: newRole } : null);
-      }
-      showToast(`User role updated to ${newRole.toUpperCase()}`);
-    } catch (err) {
-      // If doc doesn't exist yet, setDoc merge
-      try {
-        const target = users.find(u => u.id === userId);
-        if (target) {
-          await setDoc(doc(db, 'users', userId), {
-            name: target.name || 'User',
-            email: target.email || '',
+        ...(isNowAdmin ? { paymentStatus: 'PAID', accessStatus: 'ACTIVE' } : {}),
+        updatedAt: now
+      }, { merge: true });
+
+      // Sync role to any duplicate users docs with the same email and to userLogins
+      if (target?.email) {
+        const targetEmail = target.email.toLowerCase();
+        const safeKey = targetEmail.replace(/[^a-z0-9]/g, '_');
+        try {
+          await setDoc(doc(db, 'userLogins', safeKey), {
+            email: targetEmail,
+            name: target.name || 'Candidate',
             role: newRole,
-            updatedAt: new Date().toISOString()
+            ...(isNowAdmin ? { paymentStatus: 'PAID', accessStatus: 'ACTIVE' } : {}),
+            updatedAt: now
           }, { merge: true });
-          setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-          showToast(`User role set to ${newRole.toUpperCase()}`);
-        }
-      } catch (e: any) {
-        showToast('Failed to update role in database', 'error');
+
+          const snap = await getDocs(collection(db, 'users'));
+          await Promise.all(
+            snap.docs
+              .filter(d => d.id !== userId && (d.data().email || '').toLowerCase() === targetEmail)
+              .map(d => setDoc(doc(db, 'users', d.id), {
+                role: newRole,
+                ...(isNowAdmin ? { paymentStatus: 'PAID', accessStatus: 'ACTIVE' } : {}),
+                updatedAt: now
+              }, { merge: true }))
+          );
+        } catch (_) {}
       }
+
+      setUsers(prev => prev.map(u => u.id === userId ? {
+        ...u,
+        role: newRole,
+        ...(isNowAdmin ? { paymentStatus: 'PAID', accessStatus: 'ACTIVE' } : {})
+      } : u));
+
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser(prev => prev ? {
+          ...prev,
+          role: newRole,
+          ...(isNowAdmin ? { paymentStatus: 'PAID', accessStatus: 'ACTIVE' } : {})
+        } : null);
+      }
+
+      showToast(
+        isNowAdmin
+          ? `${target?.name || 'User'} granted ADMIN access!`
+          : `User role updated to ${newRole.toUpperCase()}`
+      );
+    } catch (err) {
+      console.error('Error updating role:', err);
+      showToast('Failed to update user role in database', 'error');
     }
   };
 
@@ -267,6 +339,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
 
     setSubmittingUser(true);
     try {
+      const isNewAdmin = newUserRole === 'admin';
       const newUserRecord: UserRecord = {
         id: `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         name: newUserName.trim(),
@@ -274,11 +347,27 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
         phone: newUserPhone.trim(),
         role: newUserRole,
         status: 'active',
+        paymentStatus: isNewAdmin ? 'PAID' : 'UNPAID',
+        accessStatus: isNewAdmin ? 'ACTIVE' : 'LOCKED',
         createdAt: new Date().toISOString(),
         examPreparingFor: newUserExam
       };
 
       await setDoc(doc(db, 'users', newUserRecord.id), newUserRecord);
+      const safeKey = newUserRecord.email!.replace(/[^a-z0-9]/g, '_');
+      try {
+        await setDoc(doc(db, 'userLogins', safeKey), {
+          name: newUserRecord.name,
+          email: newUserRecord.email,
+          phone: newUserRecord.phone,
+          role: newUserRole,
+          paymentStatus: newUserRecord.paymentStatus,
+          accessStatus: newUserRecord.accessStatus,
+          examPreparingFor: newUserExam,
+          createdAt: newUserRecord.createdAt
+        }, { merge: true });
+      } catch (_) {}
+
       setUsers(prev => [newUserRecord, ...prev]);
 
       setNewUserName('');
@@ -315,7 +404,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
   const totalStudents = users.filter(u => (u.role || 'student').toLowerCase() === 'student').length;
   const totalPaid = users.filter(u => u.paymentStatus === 'PAID' || u.role === 'admin').length;
   const totalUnpaid = users.filter(u => u.role !== 'admin' && u.paymentStatus !== 'PAID').length;
-  const totalAdmins = users.filter(u => (u.role || '').toLowerCase() === 'admin').length;
+  const totalAdmins = users.filter(u => (u.role || '').toLowerCase() === 'admin' || u.email?.toLowerCase() === 'live.rafick@gmail.com').length;
   const totalSuspended = users.filter(u => u.status === 'suspended').length;
 
   return (
@@ -478,6 +567,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
               <thead className="bg-slate-50 border-b border-slate-200 text-[#0B1C30] uppercase font-black tracking-wider text-[10px]">
                 <tr>
                   <th className="py-4 px-6">Student Name & Email</th>
+                  <th className="py-4 px-4">Role</th>
                   <th className="py-4 px-4">Registration Date</th>
                   <th className="py-4 px-4">Payment Status</th>
                   <th className="py-4 px-4">Access Status</th>
@@ -487,9 +577,10 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredUsers.map((u) => {
-                  const role = u.role || 'student';
+                  const isBootstrapAdmin = u.email?.toLowerCase() === 'live.rafick@gmail.com';
+                  const role = isBootstrapAdmin ? 'admin' : (u.role || 'student');
                   const isSuspended = u.status === 'suspended';
-                  const isAdminUser = role === 'admin' || u.email?.toLowerCase() === 'live.rafick@gmail.com';
+                  const isAdminUser = role === 'admin' || isBootstrapAdmin;
                   const isPaid = isAdminUser || u.paymentStatus === 'PAID';
                   const accessStatus = isPaid ? 'ACTIVE' : 'LOCKED';
 
@@ -524,6 +615,23 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
                       </td>
 
                       <td className="py-4 px-4">
+                        <select
+                          value={isAdminUser ? 'admin' : (role === 'user' ? 'user' : 'student')}
+                          disabled={isBootstrapAdmin}
+                          onChange={(e) => handleUpdateRole(u.id, e.target.value as 'student' | 'admin' | 'user')}
+                          className={`px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider outline-none border cursor-pointer transition-all disabled:opacity-70 disabled:cursor-not-allowed ${
+                            isAdminUser
+                              ? 'bg-purple-50 text-purple-800 border-purple-300 hover:bg-purple-100'
+                              : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+                          }`}
+                        >
+                          <option value="student">STUDENT</option>
+                          <option value="admin">ADMIN</option>
+                          <option value="user">USER</option>
+                        </select>
+                      </td>
+
+                      <td className="py-4 px-4">
                         <div className="space-y-0.5">
                           <p className="text-slate-800 font-bold text-[11px]">
                             {u.createdAt ? new Date(u.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent'}
@@ -539,7 +647,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
                           {isAdminUser ? (
                             <span className="px-2.5 py-1 rounded-xl bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
                               <ShieldCheck size={12} />
-                              ADMIN (FREE)
+                              ADMIN (FULL)
                             </span>
                           ) : (
                             <select
@@ -588,6 +696,22 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
 
                       <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          {/* Make Admin / Remove Admin Quick Toggle */}
+                          {!isBootstrapAdmin && (
+                            <button
+                              onClick={() => handleUpdateRole(u.id, isAdminUser ? 'student' : 'admin')}
+                              className={`px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-all cursor-pointer flex items-center gap-1 ${
+                                isAdminUser
+                                  ? 'bg-purple-100 hover:bg-purple-200 text-purple-800 border border-purple-300'
+                                  : 'bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 hover:border-purple-200'
+                              }`}
+                              title={isAdminUser ? "Revoke Admin Role (Set to Student)" : "Grant Admin Access"}
+                            >
+                              <ShieldCheck size={12} />
+                              <span>{isAdminUser ? 'Remove Admin' : 'Make Admin'}</span>
+                            </button>
+                          )}
+
                           {/* Payment Quick Toggle Button */}
                           {!isAdminUser && (
                             <button
@@ -670,6 +794,39 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
             </div>
 
             <div className="space-y-4 text-xs">
+              {/* Role & Admin Access Highlight Card */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 ${
+                selectedUser.role === 'admin' || selectedUser.email?.toLowerCase() === 'live.rafick@gmail.com'
+                  ? 'bg-purple-50/70 border-purple-200 text-purple-950'
+                  : 'bg-slate-50 border-slate-200 text-slate-900'
+              }`}>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black uppercase tracking-wider block text-slate-500">Account Role & Permissions</span>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className={selectedUser.role === 'admin' ? 'text-purple-600' : 'text-slate-400'} />
+                    <span className="font-black text-sm uppercase">
+                      {selectedUser.role === 'admin' || selectedUser.email?.toLowerCase() === 'live.rafick@gmail.com'
+                        ? 'ADMIN (Full Admin Panel Access)'
+                        : `${(selectedUser.role || 'student').toUpperCase()} (Candidate Portal)`}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedUser.email?.toLowerCase() !== 'live.rafick@gmail.com' && (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedUser.role || 'student'}
+                      onChange={(e) => handleUpdateRole(selectedUser.id, e.target.value as 'student' | 'admin' | 'user')}
+                      className="px-3 py-2 rounded-xl font-black text-xs bg-white border border-slate-300 text-slate-800 outline-none cursor-pointer shadow-2xs"
+                    >
+                      <option value="student">Student</option>
+                      <option value="admin">Admin</option>
+                      <option value="user">User</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
               {/* Payment & Access Status Highlight Card */}
               <div className={`p-4 rounded-2xl border flex items-center justify-between ${
                 selectedUser.paymentStatus === 'PAID' || selectedUser.role === 'admin'
@@ -749,7 +906,21 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
 
               <div className="space-y-2 pt-2">
                 <h4 className="font-extrabold text-slate-800">Quick Actions</h4>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {selectedUser.email?.toLowerCase() !== 'live.rafick@gmail.com' && (
+                    <button
+                      onClick={() => handleUpdateRole(selectedUser.id, selectedUser.role === 'admin' ? 'student' : 'admin')}
+                      className={`px-4 py-3 rounded-2xl font-black text-xs cursor-pointer flex items-center gap-1.5 transition-all ${
+                        selectedUser.role === 'admin'
+                          ? 'bg-purple-100 text-purple-900 hover:bg-purple-200'
+                          : 'bg-purple-600 text-white hover:bg-purple-700 shadow-xs'
+                      }`}
+                    >
+                      <ShieldCheck size={15} />
+                      <span>{selectedUser.role === 'admin' ? 'Remove Admin Access' : 'Make Admin'}</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       setIsDetailModalOpen(false);
@@ -758,7 +929,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
                     className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Mail size={15} />
-                    <span>Send Email Notification</span>
+                    <span>Send Email</span>
                   </button>
 
                   <button

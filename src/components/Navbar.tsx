@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, GraduationCap } from 'lucide-react';
+import { LogOut, GraduationCap, ShieldCheck } from 'lucide-react';
 import ConsultationModal from './ConsultationModal';
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const location = useLocation();
 
@@ -99,6 +99,15 @@ const Navbar = () => {
           <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-2">
+                {isAdmin && (
+                  <Link
+                    to="/adminlandingpage"
+                    className="bg-amber-400 text-slate-950 px-3.5 py-2 rounded-full text-xs font-black hover:bg-amber-300 transition-all shadow-md flex items-center gap-1.5"
+                  >
+                    <ShieldCheck size={15} />
+                    <span className="hidden sm:inline">Admin Panel</span>
+                  </Link>
+                )}
                 <Link 
                   to="/dashboard" 
                   className="bg-white text-brand-blue px-4 py-2 rounded-full text-xs font-black hover:bg-white/90 transition-all shadow-md flex items-center gap-1.5"

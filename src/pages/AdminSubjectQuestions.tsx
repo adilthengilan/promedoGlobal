@@ -31,7 +31,7 @@ interface Question {
 
 export default function AdminSubjectQuestions() {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, loading: authLoading } = useAuth();
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -283,6 +283,14 @@ export default function AdminSubjectQuestions() {
       setQuestions([]);
     }
   }, [selectedSubjectId]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Handle access deny
   if (!isAdmin) {
