@@ -1517,12 +1517,8 @@ const AdminDashboard = () => {
         <div className="p-3.5 border-t border-[#273148] bg-[#141A28] flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full ring-2 ring-blue-400/80 p-0.5 overflow-hidden shrink-0">
-                <img 
-                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80" 
-                  alt="Promedo Administrator" 
-                  className="w-full h-full object-cover rounded-full"
-                />
+              <div className="w-10 h-10 rounded-full ring-2 ring-blue-400/80 bg-[#3853A4] text-white flex items-center justify-center font-black text-xs shrink-0">
+                {(user?.displayName || 'A').charAt(0).toUpperCase()}
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-[#141A28]" />
             </div>
@@ -1762,12 +1758,8 @@ const AdminDashboard = () => {
               className="flex items-center gap-1.5 pl-1.5 cursor-pointer group"
               title="Profile & Dashboard"
             >
-              <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 p-0.5 overflow-hidden shadow-2xs">
-                <img 
-                  src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?w=120&auto=format&fit=crop&q=80" 
-                  alt="Admin" 
-                  className="w-full h-full object-cover rounded-full" 
-                />
+              <div className="w-10 h-10 rounded-full ring-2 ring-amber-400/80 bg-[#3853A4] text-white flex items-center justify-center font-black text-xs shadow-2xs">
+                {(user?.displayName || 'A').charAt(0).toUpperCase()}
               </div>
               <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-700 transition-colors" />
             </div>
