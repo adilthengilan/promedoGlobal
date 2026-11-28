@@ -18,6 +18,7 @@ import AdminSubjectQuestions from './AdminSubjectQuestions';
 import AdminUserManagement from '../components/AdminUserManagement';
 import AdminEmailSender from '../components/AdminEmailSender';
 import AdminUserActivities from '../components/AdminUserActivities';
+import { ShimmerPageDetail, ShimmerTable } from '../components/ShimmerLoader';
 
 interface AppointmentNotification {
   id: string;
@@ -1117,11 +1118,7 @@ const AdminDashboard = () => {
   };
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ShimmerPageDetail title="Loading Admin Control Center..." />;
   }
 
   if (!isAdmin) {
@@ -1942,10 +1939,7 @@ const AdminDashboard = () => {
 
               <div className="overflow-x-auto min-h-[400px]">
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-brand-blue">
-                    <div className="w-12 h-12 border-4 border-brand-blue border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="font-bold">Fetching Data...</p>
-                  </div>
+                  <ShimmerTable rows={6} title="Fetching Data..." />
                 ) : activeTab === 'halloffame' ? (
                   <div className="space-y-8">
                     {/* Sub-tab Navigation */}

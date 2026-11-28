@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import QuestionImage from '../components/QuestionImage';
+import { ShimmerExamRunner } from '../components/ShimmerLoader';
 import { 
   fetchQuestionsForSubject, 
   prepareShuffledQuestions, 
@@ -355,14 +356,7 @@ export default function SubjectPractice() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen pt-32 pb-24 bg-slate-50 flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-500">Loading subject practice deck...</p>
-        </div>
-      </div>
-    );
+    return <ShimmerExamRunner title="Loading subject practice deck..." />;
   }
 
   return (

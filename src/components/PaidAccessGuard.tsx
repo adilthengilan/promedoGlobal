@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PremiumUpgradeScreen from './PremiumUpgradeScreen';
+import { ShimmerPageDetail } from './ShimmerLoader';
 
 export type ProtectedModule = 'Courses' | 'Mock Tests' | 'Practice' | 'Question Bank';
 
@@ -29,14 +30,7 @@ export const PaidAccessGuard: React.FC<PaidAccessGuardProps> = ({ moduleName, ch
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-500">Checking premium access...</p>
-        </div>
-      </div>
-    );
+    return <ShimmerPageDetail title="Checking premium access..." />;
   }
 
   // Not logged in -> redirect to login with state

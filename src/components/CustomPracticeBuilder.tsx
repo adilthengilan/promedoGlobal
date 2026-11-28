@@ -32,6 +32,7 @@ import {
 import { PracticeSubject } from '../lib/subjectPracticeService';
 import { getBookmarkedQuestionIds } from '../lib/questionFolders';
 import { subscribeToUserBookmarks } from '../lib/userQuestionService';
+import { ShimmerCardGrid } from './ShimmerLoader';
 
 interface CustomPracticeBuilderProps {
   subjects?: PracticeSubject[];
@@ -467,10 +468,7 @@ export default function CustomPracticeBuilder({ subjects }: CustomPracticeBuilde
 
         {/* CUSTOM MODULES CARDS GRID */}
         {loadingModules ? (
-          <div className="py-20 text-center space-y-3">
-            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-500">Loading custom practice modules...</p>
-          </div>
+          <ShimmerCardGrid count={3} variant="subject" />
         ) : filteredSavedModules.length === 0 ? (
           <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-4">
             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto border border-blue-200">

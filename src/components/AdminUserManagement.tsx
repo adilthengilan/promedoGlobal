@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, getDocs, doc, updateDoc, setDoc, addDoc, query, orderBy } from 'firebase/firestore';
+import { ShimmerTable } from './ShimmerLoader';
 
 export interface UserRecord {
   id: string;
@@ -551,10 +552,7 @@ export default function AdminUserManagement({ onOpenEmailSender }: AdminUserMana
       {/* Users Data Table */}
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-2xs overflow-hidden">
         {loading ? (
-          <div className="py-20 text-center space-y-3">
-            <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-500">Loading candidate directory...</p>
-          </div>
+          <ShimmerTable rows={6} title="Loading candidate directory..." />
         ) : filteredUsers.length === 0 ? (
           <div className="py-16 text-center space-y-3 border-dashed">
             <Users size={36} className="text-slate-300 mx-auto" />

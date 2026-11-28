@@ -4,6 +4,7 @@ import { Play, ClipboardCheck, Clock, Award, ShieldAlert, ArrowLeft, Loader2, Us
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { ShimmerPageDetail } from '../components/ShimmerLoader';
 
 const MockTestIntro = () => {
   const location = useLocation();
@@ -45,12 +46,7 @@ const MockTestIntro = () => {
   }, [testId, exam]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen pt-32 flex flex-col items-center justify-center text-brand-blue">
-        <Loader2 size={40} className="animate-spin mb-4" />
-        <p className="font-bold">Preparing your exam dashboard...</p>
-      </div>
-    );
+    return <ShimmerPageDetail title="Preparing your exam dashboard..." />;
   }
 
   const displayExam = testData?.exam || selectedExam || exam;

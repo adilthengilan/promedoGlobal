@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { DEFAULT_LMS_CATALOG } from './Courses';
+import { ShimmerPageDetail } from '../components/ShimmerLoader';
 
 const CourseDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -71,14 +72,7 @@ const CourseDetail: React.FC = () => {
   }, [id, user]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFF] pt-24 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-xs font-bold text-gray-500">Loading course curriculum...</p>
-        </div>
-      </div>
-    );
+    return <ShimmerPageDetail title="Loading course curriculum..." />;
   }
 
   if (!course) {

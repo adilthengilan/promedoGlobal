@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import CourseProgressBar from '../components/CourseProgressBar';
+import { ShimmerExamRunner } from '../components/ShimmerLoader';
 
 const CoursePlayer: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -103,11 +104,7 @@ const CoursePlayer: React.FC = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0B1C30] text-white flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#3853A4] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ShimmerExamRunner dark title="Loading video classroom..." />;
   }
 
   if (!course || allLessons.length === 0 || !currentLesson) {

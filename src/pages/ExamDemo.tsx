@@ -7,6 +7,7 @@ import { collection, getDocs } from 'firebase/firestore';
 import { COUNTRY_CODES, parsePhoneWithCountryCode } from '../data/countryCodes';
 import { CountryCodeSelect } from '../components/CountryCodeSelect';
 import { recordCandidateLogin, EXAM_OPTIONS } from '../lib/userLogins';
+import { ShimmerCardGrid } from '../components/ShimmerLoader';
 
 const ExamDemo = () => {
   const navigate = useNavigate();
@@ -112,10 +113,7 @@ const ExamDemo = () => {
 
           <div className="max-w-4xl mx-auto">
             {loading ? (
-              <div className="py-12 flex flex-col items-center justify-center text-gray-400">
-                <Loader2 size={32} className="animate-spin mb-4 text-brand-blue" />
-                <p className="font-bold">Loading free tests...</p>
-              </div>
+              <ShimmerCardGrid count={2} columns={2} variant="mocktest" />
             ) : freeTests.length > 0 ? (
               <div className="flex flex-wrap justify-center gap-6">
                 {freeTests.map((test) => (
@@ -180,9 +178,8 @@ const ExamDemo = () => {
 
           <div className="flex flex-wrap justify-center gap-6">
             {loading ? (
-              <div className="w-full py-20 flex flex-col items-center justify-center text-gray-400">
-                <Loader2 size={40} className="animate-spin mb-4 text-brand-blue" />
-                <p className="font-bold">Loading premium tests...</p>
+              <div className="w-full">
+                <ShimmerCardGrid count={3} variant="mocktest" />
               </div>
             ) : paidTests.length > 0 ? (
               paidTests.map((test) => (
@@ -216,10 +213,10 @@ const ExamDemo = () => {
                   </div>
 
                   <button 
-                    onClick={() => navigate(`/mock-test/${test.id}`)}
-                    className="w-full py-4 bg-brand-blue text-white rounded-2xl font-bold hover:shadow-lg hover:shadow-brand-blue/20 transition-all flex items-center justify-center gap-2 shadow-sm"
+                    onClick={() => navigate(`/checkout/mock-${test.id}`)}
+                    className="w-full py-4 bg-brand-blue text-white rounded-2xl font-bold hover:shadow-lg hover:shadow-brand-blue/20 transition-all flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                   >
-                    Start Free Simulator
+                    Unlock & Start Simulator ({test.price || '$49'})
                     <ArrowRight size={18} />
                   </button>
                 </motion.div>

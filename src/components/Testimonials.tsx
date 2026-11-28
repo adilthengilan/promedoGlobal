@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Star, CheckCircle2, Award, MessageSquarePlus } from 'lucide-react';
 import { fetchApprovedTestimonials, Testimonial } from '../lib/testimonials';
 import { SubmitTestimonialModal } from './SubmitTestimonialModal';
+import { ShimmerCardGrid } from './ShimmerLoader';
 
 const Testimonials: React.FC = () => {
   const [reviewsList, setReviewsList] = useState<Testimonial[]>([]);
@@ -58,9 +59,7 @@ const Testimonials: React.FC = () => {
 
         {/* Card Grid */}
         {loading && reviewsList.length === 0 ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-3 border-brand-blue border-t-transparent rounded-full animate-spin"></div>
-          </div>
+          <ShimmerCardGrid count={3} variant="subject" />
         ) : reviewsList.length === 0 ? (
           <div className="text-center py-12 px-6 rounded-3xl bg-blue-50/40 border border-blue-100 max-w-lg mx-auto">
             <div className="w-12 h-12 rounded-full bg-blue-100 text-brand-blue mx-auto flex items-center justify-center mb-3 shadow-2xs">

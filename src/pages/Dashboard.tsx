@@ -62,6 +62,7 @@ import { usePortalSections } from '../lib/portalSections';
 import { EditProfileModal } from '../components/EditProfileModal';
 import { UserProfileData, isProfileIncomplete, calculateProfileCompletion } from '../lib/userProfileService';
 import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
+import { ShimmerCardGrid } from '../components/ShimmerLoader';
 
 const DEFAULT_MOCK_TESTS: any[] = [];
 const STUDY_MATERIALS: any[] = [];
@@ -618,6 +619,16 @@ const Dashboard = () => {
 
         {/* Sidebar Call to Action & Admin Link */}
         <div className="px-4 py-4 space-y-2 border-t border-[#E5EEFF]">
+          {!isAdmin && !isPaid && (
+            <button
+              onClick={() => navigate('/checkout/pro-membership')}
+              className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-3 rounded-xl font-black text-xs shadow-md shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles size={15} />
+              <span>Upgrade to Pro • Checkout</span>
+            </button>
+          )}
+
           <button 
             onClick={() => navigate('/mock-test-intro')}
             className="w-full bg-[#006591] hover:bg-[#005278] text-white py-3 rounded-xl font-black text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -1225,7 +1236,9 @@ const Dashboard = () => {
                 </button>
               </div>
 
-              {enrolledCourses.length === 0 ? (
+              {loading ? (
+                <ShimmerCardGrid count={3} variant="course" />
+              ) : enrolledCourses.length === 0 ? (
                 <div className="bg-white p-12 rounded-3xl border border-[#E5EEFF] text-center space-y-4">
                   <BookOpen size={48} className="mx-auto text-gray-300" />
                   <h3 className="text-lg font-black text-[#0B1C30]">No courses enrolled yet</h3>
@@ -1311,6 +1324,9 @@ const Dashboard = () => {
                 </button>
               </div>
 
+              {loading ? (
+                <ShimmerCardGrid count={3} variant="course" />
+              ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {availableCourses.map((course, idx) => (
                   <div key={idx} className="bg-white rounded-3xl border border-[#E5EEFF] overflow-hidden shadow-xs hover:shadow-xl transition-all flex flex-col justify-between">
@@ -1376,6 +1392,7 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
+              )}
             </motion.div>
           )
         )}
@@ -1388,6 +1405,9 @@ const Dashboard = () => {
               <p className="text-[#45464D] text-xs font-medium">Full-length timed exam simulators strictly matched to DHA, HAAD, and SMLE blueprints.</p>
             </div>
 
+            {loading ? (
+              <ShimmerCardGrid count={3} variant="mocktest" />
+            ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayedMocktests.map((test, idx) => {
                 const isTestPaid = Boolean(test.isPaid);
@@ -1466,6 +1486,7 @@ const Dashboard = () => {
                 );
               })}
             </div>
+            )}
           </motion.div>
         )}
 

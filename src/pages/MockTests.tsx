@@ -33,6 +33,7 @@ import { COUNTRY_CODES, parsePhoneWithCountryCode } from '../data/countryCodes';
 import { CountryCodeSelect } from '../components/CountryCodeSelect';
 import { recordCandidateLogin, EXAM_OPTIONS } from '../lib/userLogins';
 import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
+import { ShimmerCardGrid } from '../components/ShimmerLoader';
 
 const DEFAULT_MOCKTESTS: any[] = [];
 const DEFAULT_ADMIN_ADS: any[] = [];
@@ -316,7 +317,9 @@ const MockTests = () => {
         </div>
 
         {/* MOCK TESTS GRID */}
-        {filteredMocktests.length > 0 ? (
+        {loading ? (
+          <ShimmerCardGrid count={6} variant="mocktest" />
+        ) : filteredMocktests.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredMocktests.map(test => {
               const isComingSoon = test.status === 'coming_soon' || test.status === 'unavailable';

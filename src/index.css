@@ -137,3 +137,36 @@
     min-height: 100vh;
   }
 }
+
+/* Shimmer Effect Animation for Data Loaders */
+@keyframes promedo-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    #EEF3FF 20%,
+    #DAE5FF 50%,
+    #EEF3FF 80%
+  );
+  background-size: 200% 100%;
+  animation: promedo-shimmer 1.5s ease-in-out infinite;
+}
+
+.shimmer-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.05) 80%
+  );
+  background-size: 200% 100%;
+  animation: promedo-shimmer 1.5s ease-in-out infinite;
+}
+

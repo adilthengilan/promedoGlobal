@@ -19,6 +19,7 @@ import {
   Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ShimmerCardGrid } from '../components/ShimmerLoader';
 
 export const DEFAULT_LMS_CATALOG: any[] = [];
 
@@ -165,6 +166,9 @@ const Courses: React.FC = () => {
         </div>
 
         {/* Course Cards Grid */}
+        {loading ? (
+          <ShimmerCardGrid count={6} variant="course" />
+        ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredCourses.map((course) => {
             const isEnrolled = userEnrollments.includes(course.id);
@@ -285,8 +289,9 @@ const Courses: React.FC = () => {
             );
           })}
         </div>
+        )}
 
-        {filteredCourses.length === 0 && (
+        {!loading && filteredCourses.length === 0 && (
           <div className="text-center py-20 bg-white rounded-3xl border border-[#E5EEFF] p-8">
             <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-black text-[#0B1C30] mb-2">

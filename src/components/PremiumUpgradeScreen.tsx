@@ -29,11 +29,10 @@ export const PremiumUpgradeScreen: React.FC<PremiumUpgradeScreenProps> = ({
   const navigate = useNavigate();
 
   const handleUpgradeClick = () => {
-    // Direct students to existing contact / consultation support flow
-    navigate('/contact', {
+    navigate('/checkout/pro-membership', {
       state: {
-        message: `I would like to upgrade to Promedo Global Pro to unlock full access to ${moduleName}.`,
-        subject: 'Promedo Global Pro Upgrade Request'
+        moduleName,
+        subject: 'Promedo Global Pro All-Access Membership'
       }
     });
   };
@@ -124,12 +123,12 @@ export const PremiumUpgradeScreen: React.FC<PremiumUpgradeScreenProps> = ({
               className="w-full py-4 bg-[#3853A4] hover:bg-[#2F4487] text-white font-black text-sm rounded-2xl shadow-lg shadow-[#3853A4]/25 transition-all flex items-center justify-center gap-2.5 active:scale-[0.99] cursor-pointer group"
             >
               <Sparkles size={18} className="text-amber-300 group-hover:rotate-12 transition-transform" />
-              <span>Upgrade to Pro</span>
+              <span>Proceed to Payment Checkout ($149)</span>
               <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
             </button>
 
             <p className="text-xs font-medium text-slate-500 text-center">
-              Contact administration to activate your premium access.
+              Instant online payment activation • Full access to Courses, Question Bank & Mock Tests.
             </p>
           </div>
 
@@ -141,15 +140,13 @@ export const PremiumUpgradeScreen: React.FC<PremiumUpgradeScreenProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              <a 
-                href="https://wa.me/971500000000" 
-                target="_blank" 
-                rel="noreferrer"
-                className="text-emerald-700 font-bold hover:underline flex items-center gap-1"
+              <button
+                onClick={() => navigate('/contact')}
+                className="text-[#3853A4] font-bold hover:underline flex items-center gap-1 cursor-pointer"
               >
-                <MessageSquare size={13} />
-                <span>WhatsApp Admin</span>
-              </a>
+                <Mail size={13} />
+                <span>Contact Support</span>
+              </button>
 
               <span className="text-slate-300">•</span>
 

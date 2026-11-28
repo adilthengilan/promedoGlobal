@@ -31,6 +31,7 @@ import {
   toggleQuestionBookmark 
 } from '../lib/questionFolders';
 import { fetchListedSubjects, PracticeSubject } from '../lib/subjectPracticeService';
+import { ShimmerQuestionList, ShimmerCardGrid } from './ShimmerLoader';
 
 export default function BookmarkedQuestions() {
   const navigate = useNavigate();
@@ -292,10 +293,7 @@ export default function BookmarkedQuestions() {
 
           {/* QUESTIONS LIST */}
           {loadingQuestions ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="w-10 h-10 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs font-bold text-slate-500">Resolving bookmarked questions...</p>
-            </div>
+            <ShimmerQuestionList count={3} />
           ) : filteredQuestions.length === 0 ? (
             <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-4">
               <div className="w-16 h-16 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mx-auto border border-amber-200">
@@ -415,10 +413,7 @@ export default function BookmarkedQuestions() {
       {activeBookmarkSubTab === 'subjects' && (
         <div className="space-y-6">
           {loadingSubjects ? (
-            <div className="py-16 text-center space-y-3">
-              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-              <p className="text-xs font-bold text-slate-500">Loading bookmarked subjects...</p>
-            </div>
+            <ShimmerCardGrid count={3} variant="subject" />
           ) : bookmarkedSubjectsList.length === 0 ? (
             <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-4">
               <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto border border-blue-200">

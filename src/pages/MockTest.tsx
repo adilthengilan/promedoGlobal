@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { recordMockAttempt } from '../lib/stats';
 import QuestionImage from '../components/QuestionImage';
 import { PremiumUpgradeScreen } from '../components/PremiumUpgradeScreen';
+import { ShimmerExamRunner } from '../components/ShimmerLoader';
 
 const MockTest = () => {
   const { user, isAdmin, isPaid } = useAuth();
@@ -203,12 +204,7 @@ const MockTest = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen pt-32 flex flex-col items-center justify-center text-brand-blue">
-        <RefreshCw size={40} className="animate-spin mb-4" />
-        <p className="font-bold">Syncing Exam Paper...</p>
-      </div>
-    );
+    return <ShimmerExamRunner title="Syncing Exam Paper..." />;
   }
 
   if (!test) {

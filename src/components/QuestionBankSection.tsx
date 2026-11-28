@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { ShimmerQuestionList, ShimmerCardGrid } from './ShimmerLoader';
 import { 
   subscribeToListedSubjects, 
   PracticeSubject, 
@@ -284,10 +285,7 @@ export default function QuestionBankSection({ isStudent = false, isAdmin = false
 
       {/* Questions List */}
       {loadingSubjects ? (
-        <div className="py-16 text-center space-y-3 bg-white rounded-3xl border border-slate-200/80">
-          <div className="w-9 h-9 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-bold text-slate-500">Loading Question Bank questions...</p>
-        </div>
+        <ShimmerQuestionList count={4} />
       ) : paginatedQuestions.length === 0 ? (
         <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-3">
           <HelpCircle size={40} className="text-slate-300 mx-auto" />
@@ -629,10 +627,7 @@ export default function QuestionBankSection({ isStudent = false, isAdmin = false
 
             {/* Subject Cards Grid */}
             {loadingSubjects ? (
-              <div className="py-20 text-center space-y-3">
-                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-                <p className="text-xs font-bold text-slate-500">Loading listed subject modules...</p>
-              </div>
+              <ShimmerCardGrid count={6} variant="subject" />
             ) : filteredSubjects.length === 0 ? (
               <div className="bg-white border border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-3">
                 <HelpCircle size={40} className="text-slate-300 mx-auto" />

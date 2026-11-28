@@ -81,6 +81,7 @@ function AppContent() {
           <Route path="/contact" element={<ContactSupport />} />
           <Route path="/support" element={<ContactSupport />} />
           <Route path="/contact-support" element={<ContactSupport />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route path="/checkout/:courseId" element={<Checkout />} />
           <Route path="/terms" element={<TermsConditions />} />
           <Route path="/terms-and-conditions" element={<TermsConditions />} />
@@ -90,7 +91,7 @@ function AppContent() {
         </Routes>
       </main>
       {!isMockTestActive && !isAuthPage && !isAdminPage && <Footer />}
-      {!isMockTestActive && !isAdminPage && <WhatsAppFloatingButton />}
+      {isHome && <WhatsAppFloatingButton />}
     </div>
   );
 }

@@ -26,6 +26,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, getDoc, setDoc, addDoc, collection } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
+import { ShimmerPageDetail } from '../components/ShimmerLoader';
 
 interface Question {
   id: string;
@@ -124,11 +125,7 @@ const AdminMocktestEditor = () => {
   }, [id]);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ShimmerPageDetail title="Loading Mock Test Editor..." />;
   }
 
   if (!isAdmin) {
@@ -277,12 +274,7 @@ const AdminMocktestEditor = () => {
   const incompleteCount = questions.filter(isQuestionIncomplete).length;
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#F4F6F9] flex flex-col items-center justify-center text-teal-600 font-bold gap-3">
-        <div className="w-10 h-10 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
-        <span className="text-sm">Loading Mock Test Editor...</span>
-      </div>
-    );
+    return <ShimmerPageDetail title="Loading Mock Test Editor..." />;
   }
 
   return (

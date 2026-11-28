@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const WHATSAPP_PHONE = '919037384400';
 
@@ -11,6 +12,11 @@ Preferred Contact Time: `;
 
 export default function WhatsAppFloatingButton() {
   const [isHovered, setIsHovered] = useState(false);
+  const location = useLocation();
+
+  if (location.pathname !== '/') {
+    return null;
+  }
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(PREFILLED_MESSAGE)}`;
 

@@ -10,6 +10,7 @@ import { collection, getDocs, doc, setDoc, addDoc, deleteDoc, query, orderBy } f
 import { useAuth } from '../context/AuthContext';
 import { uploadQuestionImage, validateQuestionImage } from '../lib/cloudinaryService';
 import QuestionImage from '../components/QuestionImage';
+import { ShimmerPageDetail, ShimmerQuestionList } from '../components/ShimmerLoader';
 
 interface Subject {
   id: string; // Document ID (typically the subject name or slugified)
@@ -285,11 +286,7 @@ export default function AdminSubjectQuestions() {
   }, [selectedSubjectId]);
 
   if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="w-10 h-10 border-4 border-brand-blue border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <ShimmerPageDetail title="Loading Question Builder..." />;
   }
 
   // Handle access deny
@@ -1193,10 +1190,7 @@ export default function AdminSubjectQuestions() {
 
                 <div className="flex-grow overflow-y-auto max-h-[550px] pr-1 space-y-3 custom-scrollbar">
                   {loadingQuestions ? (
-                    <div className="py-16 text-center text-teal-600">
-                      <Loader2 size={32} className="animate-spin mx-auto mb-2" />
-                      <p className="text-xs font-bold">Retrieving questions...</p>
-                    </div>
+                    <ShimmerQuestionList count={3} compact />
                   ) : filteredQuestions.length === 0 ? (
                     <div className="py-16 text-center text-gray-400 italic text-xs">
                       {searchText ? "No search matches found." : "No questions in this subject catalog yet."}
